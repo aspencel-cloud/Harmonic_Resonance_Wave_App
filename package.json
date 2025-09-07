@@ -1,26 +1,22 @@
 {
-  "name": "vanilla-typescript",
+  "name": "harmonic-wave-wheel",
+  "private": true,
   "version": "1.0.0",
-  "description": "JavaScript and TypeScript example starter project",
-  "main": "index.html",
+  "type": "module",
   "scripts": {
-    "start": "parcel index.html",
-    "build": "parcel build index.html"
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview --port 5173"
   },
   "dependencies": {
-    "parcel-bundler": "1.6.1",
-    "react": "19.1.1",
-    "react-dom": "19.1.1",
-    "papaparse": "5.5.3"
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
   },
   "devDependencies": {
-    "typescript": "4.4.4"
-  },
-  "resolutions": {
-    "@babel/preset-env": "7.13.8"
-  },
-  "keywords": [
-    "typescript",
-    "javascript"
-  ]
+    "@types/react": "^18.2.25",
+    "@types/react-dom": "^18.2.11",
+    "@vitejs/plugin-react": "^4.3.0",
+    "typescript": "^5.5.4",
+    "vite": "^5.3.1"
+  }
 }
