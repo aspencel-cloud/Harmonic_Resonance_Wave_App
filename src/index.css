@@ -1,0 +1,69 @@
+/* Base */
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* Default (light) */
+:root,
+[data-theme="light"] {
+  --bg: #ffffff;
+  --text: #1a1a1a;
+
+  --ring: #c7c7c7;
+  --tick: #555; /* 5° ticks */
+  --tick-strong: #111; /* 0° cusps — darker */
+  --label: #111; /* sign labels + house numbers */
+
+  --accent: #c03a2b;
+
+  /* alternating sign wedges (subtle) */
+  --sectorA: rgba(0, 0, 0, 0.04);
+  --sectorB: rgba(0, 0, 0, 0.02);
+}
+
+/* Dark */
+[data-theme="dark"] {
+  --bg: #0f1115;
+  --text: #f2f2f2;
+
+  --ring: #5e6470;
+  --tick: #cdd3dd; /* 5° ticks brighter */
+  --tick-strong: #ffffff; /* 0° cusps brightest for clear spokes */
+  --label: #ffffff; /* brighter labels & house numbers */
+
+  --accent: #ff6b5a;
+
+  --sectorA: rgba(255, 255, 255, 0.055);
+  --sectorB: rgba(255, 255, 255, 0.025);
+}
+
+/* SVG text defaults */
+text {
+  fill: var(--label);
+}
+
+/* Buttons */
+button {
+  padding: 6px 12px;
+  margin: 2px;
+  border-radius: 6px;
+  border: 1px solid var(--ring);
+  background: var(--bg);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 14px;
+}
+button:hover {
+  background: var(--sectorA);
+}
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
