@@ -1,1 +1,4 @@
+# dependency locks we don't use in this repo
+pnpm-lock.yaml
+yarn.lock
 node_modules
