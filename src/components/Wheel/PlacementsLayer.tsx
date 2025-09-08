@@ -10,8 +10,10 @@ import { getWaveColor } from "../../data/waveColors";
 import { getWaveName } from "../../data/waves";
 
 /**
- * Group overlapping placements by (sign, floor(degree)) and spread them
- * using a small angular fan + radial stepping for readability.
+ * Improved collision handling:
+ * - Group by (sign, floor(degree)) like your current loader does.
+ * - Dynamic fan spread based on group size (up to ±10° total).
+ * - Radial stepping so stacked glyphs don't overlap visually.
  */
 export default function PlacementsLayer({
   cx,
@@ -34,6 +36,7 @@ export default function PlacementsLayer({
   onShowTooltip?: (e: React.MouseEvent<SVGElement>, html: string) => void;
   onHideTooltip?: () => void;
 }) {
+  // 1) Group by (sign, floor(degree)) because upstream normalizes degree -> integer
   const groups = new Map<string, Placement[]>();
   for (const p of placements) {
     const deg = Math.floor(p.degree);
@@ -43,27 +46,49 @@ export default function PlacementsLayer({
     groups.set(key, arr);
   }
 
-  const ANG_STEP = 1.15;
-  const RAD_STEP = useGlyphs ? 12 : 8;
-  const BASE_R = r;
+  // Tunables: you can tweak these two for your visual taste
+  const MAX_FAN_DEG = 10; // total spread limit (±10°)
+  const BASE_SPREAD_DEG = 3; // minimal total spread for small groups
+  const SPREAD_PER_ITEM = 0.8; // how quickly spread grows with n
+  const RAD_STEP = useGlyphs ? 12 : 8; // radial separation between stacked items
 
   const nodes: JSX.Element[] = [];
 
+  // 2) Render each group with dynamic fan + radial stacking
   for (const [key, rawList] of groups) {
+    // stable sort by planet so behavior is predictable
     const list = [...rawList].sort((a, b) =>
       a.planet > b.planet ? 1 : a.planet < b.planet ? -1 : 0
     );
+
     const [sign, degStr] = key.split("|");
     const deg = parseInt(degStr, 10);
     const baseAngle = signDegreeToAngle(sign as any, deg);
+
     const n = list.length;
     const centerIdx = (n - 1) / 2;
 
+    // Dynamic total spread in degrees (cap at MAX_FAN_DEG)
+    // Example: n=2 => around ~3.8°, n=5 => ~7°, n>=10 => capped near 10°
+    const totalSpread = Math.min(
+      MAX_FAN_DEG,
+      BASE_SPREAD_DEG + n * SPREAD_PER_ITEM
+    );
+
+    // If only one element, no angular offset; otherwise distribute across the total spread
+    const denom = Math.max(n - 1, 1);
+
     list.forEach((p, idx) => {
       const idxCentered = idx - centerIdx;
-      const a = baseAngle + idxCentered * ANG_STEP;
-      const radius = BASE_R - Math.abs(idxCentered) * RAD_STEP;
-      const { x, y } = polarToCartesian(cx, cy, radius, a);
+
+      // Angular offset: center at baseAngle; distribute evenly within totalSpread
+      const angleOffset = n > 1 ? (idxCentered * totalSpread) / denom : 0;
+      const angle = baseAngle + angleOffset;
+
+      // Radial stacking: move inward with |idxCentered|
+      const radius = r - Math.abs(idxCentered) * RAD_STEP;
+
+      const { x, y } = polarToCartesian(cx, cy, radius, angle);
 
       const d = Math.floor(p.degree);
       const wave = waveIdForDegreeWithinSign(d);

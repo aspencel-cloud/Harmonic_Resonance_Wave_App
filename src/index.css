@@ -67,3 +67,108 @@ button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
+.wheel {
+  background: transparent;
+  font-family: system-ui, sans-serif;
+}
+.sign-slice {
+  fill: #0f172a0d;
+  stroke: #0f172a1a;
+}
+.sign-label {
+  fill: #0b1220;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+.house-cusp {
+  stroke: #0b1220;
+  stroke-width: 1.5;
+  opacity: 0.55;
+}
+.house-label {
+  fill: #0b1220;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.glyph {
+  cursor: pointer;
+}
+.glyph-bg {
+  fill: #ffffff;
+  stroke: #0b1220;
+  stroke-width: 1;
+}
+.glyph-text {
+  fill: #0b1220;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+/* Wave accent rings (if desired per-wave tint on glyph bg via stroke) */
+.wave-1 {
+  stroke: #ef4444;
+}
+.wave-2 {
+  stroke: #f59e0b;
+}
+.wave-3 {
+  stroke: #22c55e;
+}
+.wave-4 {
+  stroke: #3b82f6;
+}
+.wave-5 {
+  stroke: #a855f7;
+}
+.wave-6 {
+  stroke: #0ea5e9;
+}
+.wave-7 {
+  stroke: #10b981;
+}
+.wave-8 {
+  stroke: #06b6d4;
+}
+.wave-9 {
+  stroke: #eab308;
+}
+.wave-10 {
+  stroke: #fb7185;
+}
+
+.tooltip {
+  position: absolute;
+  right: 16px;
+  top: 16px;
+  background: #ffffff;
+  border: 1px solid #0b122033;
+  border-radius: 12px;
+  padding: 10px 12px;
+  box-shadow: 0 6px 20px #00000014;
+  min-width: 220px;
+}
+.t-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 3px 0;
+}
+.t-key {
+  color: #334155;
+  font-weight: 600;
+}
+
+.export-panel {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+.export-panel button {
+  padding: 6px 10px;
+  border: 1px solid #0b122033;
+  background: #fff;
+  border-radius: 10px;
+  font-weight: 600;
+}
