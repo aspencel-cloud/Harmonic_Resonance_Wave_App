@@ -19,6 +19,52 @@ const LS_THEME = "hww.theme";
 // Accept common ASC labels found in raw data
 const ASC_ALIASES = new Set(["ASC", "Asc", "Ascendant", "Asc."]);
 
+// --- NEW: Canonical sign order and helpers for house math ---
+const SIGNS = [
+  "Aries",
+  "Taurus",
+  "Gemini",
+  "Cancer",
+  "Leo",
+  "Virgo",
+  "Libra",
+  "Scorpio",
+  "Sagittarius",
+  "Capricorn",
+  "Aquarius",
+  "Pisces",
+] as const;
+
+function signIndexFromName(name: string | undefined): number | null {
+  if (!name) return null;
+  const i = SIGNS.indexOf(name as (typeof SIGNS)[number]);
+  return i >= 0 ? i : null;
+}
+
+function houseFromAscSign(
+  ascSignName: string | undefined,
+  signName: string | undefined
+): number | null {
+  const ascI = signIndexFromName(ascSignName);
+  const sI = signIndexFromName(signName);
+  if (ascI == null || sI == null) return null;
+  return ((sI - ascI + 12) % 12) + 1; // 1..12
+}
+
+// --- NEW: Wave name lookup (kept local to avoid touching other files) ---
+const WAVE_NAMES: Record<number, string> = {
+  1: "Root Trinity",
+  2: "Soul Mirror",
+  3: "Spiral Initiate",
+  4: "Mystic Arc",
+  5: "Edge Dancers",
+  6: "Bridge Builders",
+  7: "Heart Weavers",
+  8: "Crystal Initiates",
+  9: "Harvesters",
+  10: "Genesis Mirrors",
+};
+
 // Find the ASC sign from current placements (manual or chart)
 function deriveAscSignFromPlacements(
   items: { planet: string; sign: string }[]
@@ -125,24 +171,39 @@ export default function App() {
 
   // export
   function exportPlacementsCsv() {
+    const ascSign = deriveAscSignFromPlacements(placements);
+
     const rows = placements.map((p) => {
       const deg = Math.floor(p.degree);
       const waveId = waveIdForDegreeWithinSign(deg) ?? "";
+      const waveName =
+        typeof waveId === "number" ? WAVE_NAMES[waveId] || "" : "";
+
+      // Context-driven fields (existing behavior)
       const ctx = waveId
         ? context?.[`Wave${waveId}`]?.[p.sign]?.[p.planet]?.[String(deg)] ??
           null
         : null;
+
+      // Optional: include sign index and whole-sign house (derived from ASC)
+      const signIndex = signIndexFromName(p.sign);
+      const house = houseFromAscSign(ascSign, p.sign);
+
       return {
         Planet: p.planet,
         Sign: p.sign,
+        SignIndex: signIndex ?? "",
         Degree: deg,
         Wave: waveId,
+        WaveName: waveName, // <-- NEW: easy to read in spreadsheets
+        House: house ?? "", // <-- NEW: whole-sign house from ASC
         Note: (ctx as any)?.Note ?? "",
         Sabian: (ctx as any)?.Sabian ?? "",
         Chandra: (ctx as any)?.Chandra ?? "",
         PersonalQuestion: (ctx as any)?.Question ?? "",
       };
     });
+
     exportCsv(
       rows,
       mode === "manual" ? "placements-manual.csv" : "placements-chart.csv"
