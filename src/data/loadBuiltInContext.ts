@@ -1,4 +1,3 @@
-// src/data/loadBuiltInContext.ts
 import Papa from "papaparse";
 import type { ContextMap } from "../app/types";
 import { normSign, normPlanet } from "./aliases";
@@ -6,13 +5,19 @@ import { normSign, normPlanet } from "./aliases";
 type Manifest = { version: string; dataset: string };
 type RawRow = Record<string, string | number | null | undefined>;
 
+/** Safe join: BASE_URL (path) + relative file path */
+function withBase(relPath: string): string {
+  let base = (import.meta as any).env?.BASE_URL || "/";
+  if (!base.endsWith("/")) base += "/";
+  const rel = String(relPath || "").replace(/^\/+/, ""); // strip leading slash
+  return base + rel;
+}
+
 export async function fetchContextManifest(): Promise<Manifest> {
-  const MANIFEST_URL = new URL(
-    "data/context_manifest.json",
-    import.meta.env.BASE_URL
-  ).toString();
-  const res = await fetch(MANIFEST_URL, { cache: "no-store" });
-  if (!res.ok) throw new Error("Failed to fetch context manifest");
+  const url = withBase("data/context_manifest.json");
+  const res = await fetch(url, { cache: "no-store" });
+  if (!res.ok)
+    throw new Error(`Failed to fetch context manifest: ${res.status}`);
   return (await res.json()) as Manifest;
 }
 
@@ -79,20 +84,21 @@ function tryParse(text: string, delimiter: string): ParseCandidate {
 }
 
 export async function fetchContextCsv(path: string): Promise<RawRow[]> {
-  const DATASET_URL = new URL(path, import.meta.env.BASE_URL).toString();
-  const res = await fetch(DATASET_URL, { cache: "no-store" });
-  if (!res.ok) throw new Error(`Failed to fetch ${DATASET_URL}`);
+  const url = withBase(path); // path is "data/context_v1.csv" from manifest
+  const res = await fetch(url, { cache: "no-store" });
+  if (!res.ok) throw new Error(`Failed to fetch ${url}: ${res.status}`);
   let text = await res.text();
 
-  // Guard against HTML (wrong path)
+  // Guard: wrong path returns HTML
   const head = text.slice(0, 200).toLowerCase();
   if (head.includes("<!doctype html") || head.includes("<html")) {
     console.error(
-      `[CTX] ${DATASET_URL} returned HTML (not CSV). Check manifest dataset path.`
+      `[CTX] ${url} returned HTML (not CSV). Check manifest dataset path.`
     );
     throw new Error("Context CSV path returned HTML, not CSV.");
   }
 
+  // Strip BOM
   if (text.charCodeAt(0) === 0xfeff) text = text.slice(1);
 
   const attempts = [",", ";", "\t"].map((d) => tryParse(text, d));

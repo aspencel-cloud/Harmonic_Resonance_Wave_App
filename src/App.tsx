@@ -1,4 +1,3 @@
-// src/App.tsx
 import React, { useEffect, useRef, useState } from "react";
 import { initialState } from "./app/state";
 import { ContextMap, Placement } from "./app/types";
@@ -12,13 +11,12 @@ import { exportSvg, exportPng, exportJson, exportCsv } from "./utils/export";
 import { waveIdForDegreeWithinSign } from "./utils/mapping";
 import { useElementSize } from "./hooks/useElementSize";
 
-// NEW
+// NEW: context loader (reference data: Sabian/Chandra/Note/Question)
 import {
   fetchContextManifest,
   fetchContextCsv,
   rowsToContext,
 } from "./data/loadBuiltInContext";
-import { normPlanet, normSign } from "./data/aliases";
 
 type Mode = "manual" | "chart";
 const LS_MANUAL = "hww.placements.manual";
@@ -33,7 +31,7 @@ function deriveAscSignFromPlacements(
   items: { planet: string; sign: string }[]
 ) {
   const asc = items.find((p) => ASC_ALIASES.has(p.planet));
-  return asc?.sign;
+  return asc?.sign; // e.g., "Sagittarius"
 }
 
 export default function App() {
@@ -77,9 +75,6 @@ export default function App() {
       localStorage.setItem(LS_CHART, JSON.stringify(chartPlacements));
     } catch {}
   }, [chartPlacements]);
-  useEffect(() => {
-    (window as any).__CTX__ = context;
-  }, [context]);
 
   // NEW: autoload built-in CONTEXT (Sabian/Chandra/Notes) once if context is empty
   useEffect(() => {
@@ -98,10 +93,8 @@ export default function App() {
           const raw = await fetchContextCsv(manifest.dataset);
           const loaded = rowsToContext(raw);
           setContext(loaded);
-          (window as any).__CTX__ = loaded; // expose for console debugging
-          console.log(
-            `Loaded built-in context v${manifest.version} (${raw.length} rows).`
-          );
+          localStorage.setItem("hww.ctx.version", manifest.version);
+          console.log(`Loaded built-in context v${manifest.version}`);
         } catch (e) {
           console.error("Auto-load context failed:", e);
         }
@@ -169,12 +162,9 @@ export default function App() {
     const rows = placements.map((p) => {
       const deg = Math.floor(p.degree);
       const waveId = waveIdForDegreeWithinSign(deg) ?? "";
-      const planetKey = normPlanet(p.planet);
-      const signKey = normSign(p.sign);
       const ctx = waveId
-        ? (context as any)?.[`Wave${waveId}`]?.[signKey]?.[planetKey]?.[
-            String(deg)
-          ] ?? null
+        ? context?.[`Wave${waveId}`]?.[p.sign]?.[p.planet]?.[String(deg)] ??
+          null
         : null;
       return {
         Planet: p.planet,
@@ -340,19 +330,20 @@ export default function App() {
           </button>
           <button onClick={exportPlacementsCsv}>Export Placements CSV</button>
 
-          {/* Keep the debug context loader for now */}
+          {/* NEW: manual reload for reference context */}
           <button
             onClick={async () => {
               try {
                 const manifest = await fetchContextManifest();
+                console.log("[CTX] manifest", manifest);
                 const raw = await fetchContextCsv(manifest.dataset);
                 const loaded = rowsToContext(raw);
                 setContext(loaded);
-                (window as any).__CTX__ = loaded;
+                localStorage.setItem("hww.ctx.version", manifest.version);
                 alert(`Built-in context v${manifest.version} loaded.`);
-              } catch (e) {
-                console.error(e);
-                alert("Failed to load built-in context. See console.");
+              } catch (e: any) {
+                console.error("[CTX] load failed:", e);
+                alert(`Failed to load built-in context:\n${e?.message || e}`);
               }
             }}
           >
@@ -379,9 +370,9 @@ export default function App() {
             onSelect={handleSelect}
             filterWaveId={selectedWaveId}
             useGlyphs={useGlyphs}
-            rotationDeg={0}
+            rotationDeg={0} // no global rotation (stable)
             showHouses={showHouses}
-            ascSign={ascSign as any}
+            ascSign={ascSign as any} // House 1 = ASC sign
             asc={showAngles ? null : null}
             mc={showAngles ? null : null}
             onShowTooltip={showTooltipFromEvent}
