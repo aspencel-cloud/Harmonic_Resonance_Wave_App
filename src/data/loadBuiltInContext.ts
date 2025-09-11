@@ -1,9 +1,4 @@
 // src/data/loadBuiltInContext.ts
-// Robust built-in context loader.
-// - Tries ',', ';', '\t' and validates required headers
-// - Picks the valid candidate with the most rows
-// - Strips BOM, normalizes headers, normalizes Sign/Planet
-
 import Papa from "papaparse";
 import type { ContextMap } from "../app/types";
 import { normSign, normPlanet } from "./aliases";
@@ -12,7 +7,11 @@ type Manifest = { version: string; dataset: string };
 type RawRow = Record<string, string | number | null | undefined>;
 
 export async function fetchContextManifest(): Promise<Manifest> {
-  const res = await fetch("/data/context_manifest.json", { cache: "no-store" });
+  const MANIFEST_URL = new URL(
+    "data/context_manifest.json",
+    import.meta.env.BASE_URL
+  ).toString();
+  const res = await fetch(MANIFEST_URL, { cache: "no-store" });
   if (!res.ok) throw new Error("Failed to fetch context manifest");
   return (await res.json()) as Manifest;
 }
@@ -64,7 +63,6 @@ function tryParse(text: string, delimiter: string): ParseCandidate {
     delimiter,
     quoteChar: '"',
     escapeChar: '"',
-    // transformHeader runs before mapping rows, so it’s the safest way
     transformHeader(h) {
       return String(h ?? "")
         .trim()
@@ -73,9 +71,6 @@ function tryParse(text: string, delimiter: string): ParseCandidate {
   });
 
   const fields = normalizeHeaders(parsed.meta?.fields);
-  // NOTE: meta.fields is not re-applied to data, but transformHeader already
-  // lowercased them for mapping; we normalize here just for validation/logging.
-
   const rows = postProcessRows(parsed.data);
   const warnings = parsed.errors || [];
   const valid = hasRequiredHeaders(fields);
@@ -84,17 +79,23 @@ function tryParse(text: string, delimiter: string): ParseCandidate {
 }
 
 export async function fetchContextCsv(path: string): Promise<RawRow[]> {
-  const res = await fetch(path, { cache: "no-store" });
-  if (!res.ok) throw new Error(`Failed to fetch ${path}`);
+  const DATASET_URL = new URL(path, import.meta.env.BASE_URL).toString();
+  const res = await fetch(DATASET_URL, { cache: "no-store" });
+  if (!res.ok) throw new Error(`Failed to fetch ${DATASET_URL}`);
   let text = await res.text();
 
-  // Strip UTF-8 BOM if present
+  // Guard against HTML (wrong path)
+  const head = text.slice(0, 200).toLowerCase();
+  if (head.includes("<!doctype html") || head.includes("<html")) {
+    console.error(
+      `[CTX] ${DATASET_URL} returned HTML (not CSV). Check manifest dataset path.`
+    );
+    throw new Error("Context CSV path returned HTML, not CSV.");
+  }
+
   if (text.charCodeAt(0) === 0xfeff) text = text.slice(1);
 
-  const delimiters = [",", ";", "\t"];
-  const attempts = delimiters.map((d) => tryParse(text, d));
-
-  // Log all attempts for visibility
+  const attempts = [",", ";", "\t"].map((d) => tryParse(text, d));
   attempts.forEach((a) =>
     console.log(
       `[CTX] candidate delimiter ${JSON.stringify(a.delimiterTried)} -> rows: ${
@@ -103,14 +104,9 @@ export async function fetchContextCsv(path: string): Promise<RawRow[]> {
     )
   );
 
-  // Filter only candidates that have required headers
   const valids = attempts.filter((a) => a.valid);
-
   if (!valids.length) {
-    console.error(
-      "[CTX] No valid parse candidates found. Check delimiter/headers in CSV."
-    );
-    // Fall back to the max rows candidate just so the app doesn't hard-crash
+    console.error("[CTX] No valid parse candidates found.");
     const best = attempts
       .slice()
       .sort((a, b) => b.rows.length - a.rows.length)[0];
@@ -122,7 +118,6 @@ export async function fetchContextCsv(path: string): Promise<RawRow[]> {
     return best.rows;
   }
 
-  // Choose the valid candidate with the most rows
   const best = valids.slice().sort((a, b) => b.rows.length - a.rows.length)[0];
   console.log(
     `[CTX] parsed rows: ${best.rows.length} (delimiter chosen: ${JSON.stringify(
@@ -140,7 +135,6 @@ export async function fetchContextCsv(path: string): Promise<RawRow[]> {
 
 export function rowsToContext(rows: RawRow[]): ContextMap {
   const ctx: any = {};
-
   const pick = (r: RawRow, keys: string[]) => {
     for (const k of keys) {
       const v = r[k];
@@ -159,12 +153,12 @@ export function rowsToContext(rows: RawRow[]): ContextMap {
     if (!Number.isFinite(deg) || deg < 0 || deg > 29) continue;
     if (!sign || !planet) continue;
 
+    const wk = `Wave${wave}`;
     const note = pick(r, ["note"]);
     const sabian = pick(r, ["sabian", "sabian symbol"]);
     const chandra = pick(r, ["chandra", "chandra symbol"]);
     const question = pick(r, ["personal question", "question"]);
 
-    const wk = `Wave${wave}`;
     ctx[wk] ||= {};
     ctx[wk][sign] ||= {};
     ctx[wk][sign][planet] ||= {};

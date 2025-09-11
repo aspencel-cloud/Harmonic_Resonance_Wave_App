@@ -1,6 +1,15 @@
 {
-  "version": "1.0.8",
+  "version": "1.0.9",
   "schemaVersion": "1",
-  "dataset": "/data/context_v1.csv",
-  "columns": ["Wave", "Degree", "Sign", "Planet", "Note", "Sabian Symbol", "Chandra Symbol", "Personal Question"]
+  "dataset": "data/context_v1.csv",
+  "columns": [
+    "Wave",
+    "Degree",
+    "Sign",
+    "Planet",
+    "Note",
+    "Sabian Symbol",
+    "Chandra Symbol",
+    "Personal Question"
+  ]
 }
