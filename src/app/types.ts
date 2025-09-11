@@ -1,26 +1,31 @@
-export type Planet =
-  | "Sun"
-  | "Moon"
-  | "Mercury"
-  | "Venus"
-  | "Mars"
-  | "Jupiter"
-  | "Saturn"
-  | "Uranus"
-  | "Neptune"
-  | "Pluto"
-  // points & angles
-  | "North Node"
-  | "South Node"
-  | "Chiron"
-  | "Lilith"
-  | "Vertex"
-  | "Part of Fortune"
-  | "ASC"
-  | "DSC"
-  | "IC"
-  | "MC";
+// src/app/types.ts
 
+/** One contextual entry at a specific Wave/Sign/Planet/Degree */
+export type ContextEntry = {
+  Note?: string;
+  Sabian?: string;
+  Chandra?: string;
+  Question?: string;
+};
+
+/**
+ * Full context map:
+ * Wave -> Sign -> Planet -> DegreeString -> ContextEntry
+ * Example:
+ *   context["Wave7"]["Scorpio"]["Part of Fortune"]["14"]
+ */
+export type ContextMap = Record<
+  string, // "Wave1" ..."Wave10"
+  Record<
+    string, // Sign (e.g., "Aries")
+    Record<
+      string, // Planet (e.g., "Sun", "Part of Fortune")
+      Record<string, ContextEntry> // Degree "0".."29"
+    >
+  >
+>;
+
+/** Signs used across the app (narrow union so autocompletion is nice) */
 export type Sign =
   | "Aries"
   | "Taurus"
@@ -35,47 +40,33 @@ export type Sign =
   | "Aquarius"
   | "Pisces";
 
-export interface Placement {
+/**
+ * Planet-ish label. Keep string to stay flexible (PoF, angles, nodes, etc.)
+ */
+export type Planet = string;
+
+/** A single placement rendered on the wheel. */
+export type Placement = {
   id: string;
   planet: Planet;
-  sign: Sign;
-  degree: number; // 0–29.999
-  retro?: boolean;
-}
-
-export interface Wave {
-  id: number; // 1..10
-  degrees: [number, number, number]; // e.g. [0,10,20] or [1,11,21]
-  label: string;
-  color?: string;
-}
-
-export interface ContextEntry {
-  Note?: string;
-  Sabian?: string;
-  Chandra?: string;
-  [k: string]: string | undefined;
-}
-
-export interface ContextMap {
-  // Wave -> Sign -> Planet -> degreeKey -> entry
-  [waveKey: string]: {
-    [sign: string]: {
-      [planet: string]: {
-        [degreeKey: string]: ContextEntry;
-        default?: ContextEntry;
-      };
-    };
+  sign: Sign | string;
+  degree: number;
+  data?: {
+    Sabian?: string;
+    Chandra?: string;
+    [key: string]: any;
   };
-}
+};
 
-export interface WheelConfig {
+/** Optional wheel/UI config carried in initialState. */
+export type WheelConfig = {
   radius: number;
   ringWidth: number;
   showTicks: boolean;
-}
+};
 
-export interface AppState {
+/** Minimal app state shape used by initialState and consumers. */
+export type AppState = {
   context: ContextMap;
-  config: WheelConfig;
-}
+  config?: WheelConfig; // <-- add this to match state.ts
+};
