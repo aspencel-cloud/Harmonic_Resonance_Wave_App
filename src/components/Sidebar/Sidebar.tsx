@@ -4,14 +4,23 @@ import type { ContextMap, Placement } from "../../app/types";
 import { waveIdForDegreeWithinSign } from "../../utils/mapping";
 import { getWaveName } from "../../data/waves";
 import { normPlanet, normSign } from "../../data/aliases";
+// NEW: Wave details type
+import type { WaveDetails } from "../../data/waveDetails";
 
 type Props = {
   context: ContextMap;
   setContext: (ctx: ContextMap) => void;
   selected: Placement | null;
+  // NEW: injected from App based on selectedWaveId
+  waveDetails?: WaveDetails | null;
 };
 
-export default function Sidebar({ context, setContext, selected }: Props) {
+export default function Sidebar({
+  context,
+  setContext,
+  selected,
+  waveDetails,
+}: Props) {
   let ctxEntry: null | {
     Note?: string;
     Sabian?: string;
@@ -166,6 +175,67 @@ export default function Sidebar({ context, setContext, selected }: Props) {
       ) : (
         <div style={{ opacity: 0.7 }}>Click a placement to see details.</div>
       )}
+
+      {/* ───── Wave Details (bottom-half section) ───── */}
+      <div
+        style={{
+          marginTop: 16,
+          paddingTop: 12,
+          borderTop: "1px solid var(--hairline, #2a2a2a)",
+        }}
+      >
+        {waveDetails ? (
+          <>
+            <h3 style={{ margin: "0 0 8px 0" }}>
+              Wave Details
+              <span
+                style={{
+                  marginLeft: 8,
+                  fontSize: 12,
+                  padding: "2px 6px",
+                  border: "1px solid var(--hairline, #2a2a2a)",
+                  borderRadius: 6,
+                  opacity: 0.8,
+                }}
+              >
+                {waveDetails.shortId}
+              </span>
+            </h3>
+
+            <div style={{ opacity: 0.9, marginBottom: 8 }}>
+              <div style={{ fontWeight: 600 }}>{waveDetails.title}</div>
+              <div style={{ fontSize: 12, opacity: 0.8 }}>
+                Anchors: {waveDetails.anchors.join(", ")}
+              </div>
+            </div>
+
+            <p style={{ marginTop: 8 }}>{waveDetails.summary}</p>
+
+            {waveDetails.keywords?.length ? (
+              <div
+                style={{ fontSize: 12, opacity: 0.85, margin: "6px 0 10px" }}
+              >
+                <strong>Keywords:</strong> {waveDetails.keywords.join(" · ")}
+              </div>
+            ) : null}
+
+            {waveDetails.sections.map((s) => (
+              <section key={s.id} style={{ marginBottom: 12 }}>
+                <h4 style={{ margin: "10px 0 6px" }}>{s.title}</h4>
+                {s.paragraphs.map((p, i) => (
+                  <p key={i} style={{ margin: "4px 0" }}>
+                    {p}
+                  </p>
+                ))}
+              </section>
+            ))}
+          </>
+        ) : (
+          <div style={{ opacity: 0.6 }}>
+            Select a Wave (via the legend) to see its details here.
+          </div>
+        )}
+      </div>
 
       <hr style={{ margin: "16px 0" }} />
 

@@ -1,0 +1,136 @@
+.app-root {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+.app-header {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+.app-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem;
+}
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.content {
+  flex: 1;
+}
+
+.wave-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.wave-btn {
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  padding: 0.5rem 0.75rem;
+  border-radius: 9999px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.wave-btn.active {
+  border-color: #374151;
+  background: #f9fafb;
+}
+.wave-name {
+  font-weight: 600;
+}
+.wave-anchors {
+  font-size: 0.85rem;
+  opacity: 0.8;
+}
+
+.details-pane {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 40;
+  pointer-events: none;
+}
+.details-pane.open {
+  pointer-events: auto;
+}
+.details-surface {
+  transform: translateY(100%);
+  transition: transform 260ms ease;
+  background: #ffffff;
+  border-top: 1px solid #e5e7eb;
+  box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.08);
+  max-height: 60dvh;
+}
+.details-pane.open .details-surface {
+  transform: translateY(0%);
+}
+.details-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+}
+.details-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.badge {
+  font-size: 0.75rem;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.375rem;
+  padding: 0.15rem 0.4rem;
+}
+.details-actions .icon-btn {
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  border-radius: 0.375rem;
+  width: 2rem;
+  height: 2rem;
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.details-content {
+  padding: 0.25rem 1rem 1rem;
+  max-height: calc(60dvh - 56px);
+  overflow: auto;
+}
+.lede {
+  font-size: 1.05rem;
+  opacity: 0.9;
+}
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding: 0.5rem 0;
+}
+.meta li {
+  list-style: none;
+}
+.section {
+  padding: 0.5rem 0;
+}
+.empty {
+  padding: 1rem;
+  opacity: 0.7;
+}
+
+@media (min-width: 1024px) {
+  .details-surface {
+    max-height: 50dvh;
+  }
+  .details-content {
+    max-height: calc(50dvh - 56px);
+  }
+}

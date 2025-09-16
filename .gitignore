@@ -2,3 +2,10 @@
 pnpm-lock.yaml
 yarn.lock
 node_modules
+# Ignore personal/backup files
+*_old.tsx
+*_old.ts
+*_old.js
+*_backup.*
+*.bak
+ b

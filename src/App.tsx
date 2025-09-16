@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useMemo } from "react";
 import { initialState } from "./app/state";
 import { ContextMap, Placement } from "./app/types";
 import Wheel from "./components/Wheel/Wheel";
@@ -11,12 +11,16 @@ import { exportSvg, exportPng, exportJson, exportCsv } from "./utils/export";
 import { waveIdForDegreeWithinSign } from "./utils/mapping";
 import { useElementSize } from "./hooks/useElementSize";
 
-// NEW: context loader (reference data: Sabian/Chandra/Note/Question)
+// Built-in context loader (reference data: Sabian/Chandra/Note/Question)
 import {
   fetchContextManifest,
   fetchContextCsv,
   rowsToContext,
 } from "./data/loadBuiltInContext";
+
+// NEW: Wave details data (static for now; can wire to CSV later)
+import { waveDetailsById, type WaveId } from "./data/waveDetails";
+// (No bottom sheet CSS in this variant since details render in Sidebar)
 
 type Mode = "manual" | "chart";
 const LS_MANUAL = "hww.placements.manual";
@@ -76,7 +80,7 @@ export default function App() {
     } catch {}
   }, [chartPlacements]);
 
-  // NEW: autoload built-in CONTEXT (Sabian/Chandra/Notes) once if context is empty
+  // Autoload built-in CONTEXT once if empty
   useEffect(() => {
     const skipLS = localStorage.getItem("hww.skipBuiltinContext") === "1";
     const sp = new URLSearchParams(window.location.search);
@@ -163,8 +167,7 @@ export default function App() {
       const deg = Math.floor(p.degree);
       const waveId = waveIdForDegreeWithinSign(deg) ?? "";
       const ctx = waveId
-        ? context?.[`Wave${waveId}`]?.[p.sign]?.[p.planet]?.[String(deg)] ??
-          null
+        ? context?.[`Wave${waveId}`]?.[p.sign]?.[p.planet]?.[String(deg)] ?? null
         : null;
       return {
         Planet: p.planet,
@@ -241,6 +244,12 @@ export default function App() {
   function hideTooltip() {
     setTooltip(null);
   }
+
+  // NEW: derive Wave details for Sidebar (from selectedWaveId)
+  const selectedDetails = useMemo(() => {
+    if (!selectedWaveId) return null;
+    return waveDetailsById[selectedWaveId as WaveId] ?? null;
+  }, [selectedWaveId]);
 
   return (
     <div
@@ -330,7 +339,7 @@ export default function App() {
           </button>
           <button onClick={exportPlacementsCsv}>Export Placements CSV</button>
 
-          {/* NEW: manual reload for reference context */}
+          {/* Reload reference context */}
           <button
             onClick={async () => {
               try {
@@ -370,9 +379,9 @@ export default function App() {
             onSelect={handleSelect}
             filterWaveId={selectedWaveId}
             useGlyphs={useGlyphs}
-            rotationDeg={0} // no global rotation (stable)
+            rotationDeg={0}
             showHouses={showHouses}
-            ascSign={ascSign as any} // House 1 = ASC sign
+            ascSign={ascSign as any}
             asc={showAngles ? null : null}
             mc={showAngles ? null : null}
             onShowTooltip={showTooltipFromEvent}
@@ -393,6 +402,8 @@ export default function App() {
         context={context}
         setContext={setContext}
         selected={placements.find((p) => p.id === selectedId) || null}
+        // NEW: pass Wave details for the bottom-half block
+        waveDetails={selectedDetails}
       />
     </div>
   );
