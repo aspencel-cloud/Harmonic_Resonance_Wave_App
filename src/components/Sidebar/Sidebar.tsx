@@ -1,38 +1,25 @@
-// src/components/Sidebar/Sidebar.tsx
-import React, { useEffect, useState } from "react";
+import React from "react";
 import type { ContextMap, Placement } from "../../app/types";
 import { waveIdForDegreeWithinSign } from "../../utils/mapping";
 import { getWaveName } from "../../data/waves";
 import { normPlanet, normSign } from "../../data/aliases";
 import type { WaveDetails } from "../../data/waveDetails";
-import "./sidebar.css";
 
 type Props = {
   context: ContextMap;
   setContext: (ctx: ContextMap) => void;
   selected: Placement | null;
   waveDetails?: WaveDetails | null;
+  showCsvLoader?: boolean; // <- NEW
 };
-
-const LS_ADVANCED = "hww.sidebarAdvanced";
 
 export default function Sidebar({
   context,
   setContext,
   selected,
   waveDetails,
+  showCsvLoader = false,
 }: Props) {
-  // Advanced section toggle (persisted)
-  const [isAdvanced, setIsAdvanced] = useState<boolean>(
-    typeof window !== "undefined" && localStorage.getItem(LS_ADVANCED) === "1"
-  );
-  useEffect(() => {
-    try {
-      if (isAdvanced) localStorage.setItem(LS_ADVANCED, "1");
-      else localStorage.removeItem(LS_ADVANCED);
-    } catch {}
-  }, [isAdvanced]);
-
   let ctxEntry: null | {
     Note?: string;
     Sabian?: string;
@@ -126,26 +113,22 @@ export default function Sidebar({
   }
 
   return (
-    <aside className="sidebar">
-      <div className="toolbar">
-        <h2>Details</h2>
-        <button
-          className="btn"
-          onClick={() => setIsAdvanced((v) => !v)}
-          title={isAdvanced ? "Hide advanced tools" : "Show advanced tools"}
-        >
-          {isAdvanced ? "Advanced ▴" : "Advanced ▾"}
-        </button>
-      </div>
+    <aside
+      style={{
+        borderLeft: "1px solid var(--muted)",
+        padding: 16,
+        overflow: "auto",
+      }}
+    >
+      <h2 style={{ marginTop: 0 }}>Details</h2>
 
       {selected ? (
         <>
-          <h3>{normPlanet(selected.planet)}</h3>
-          <div className="meta">
-            {normSign(selected.sign)} {Math.floor(selected.degree)}°
+          <h3 style={{ margin: "8px 0" }}>{normPlanet(selected.planet)}</h3>
+          <div style={{ opacity: 0.85, marginBottom: 12 }}>
+            {normSign(selected.sign)} {Math.floor(selected.degree)}°{" "}
             {waveId ? (
               <>
-                {" "}
                 • Wave {waveId}
                 {waveName ? ` — ${waveName}` : ""}
               </>
@@ -153,103 +136,105 @@ export default function Sidebar({
           </div>
 
           {ctxEntry ? (
-            <div className="block">
+            <div style={{ display: "grid", gap: 12 }}>
               {ctxEntry.Note ? (
                 <>
-                  <h4>Note</h4>
-                  <div className="prewrap">{ctxEntry.Note}</div>
+                  <div style={{ fontWeight: 600 }}>Note</div>
+                  <div style={{ whiteSpace: "pre-wrap" }}>{ctxEntry.Note}</div>
                 </>
               ) : null}
 
               {ctxEntry.Sabian ? (
                 <>
-                  <h4>Sabian Symbol</h4>
+                  <div style={{ fontWeight: 600 }}>Sabian Symbol</div>
                   <div>{ctxEntry.Sabian}</div>
                 </>
               ) : null}
 
               {ctxEntry.Chandra ? (
                 <>
-                  <h4>Chandra Symbol</h4>
+                  <div style={{ fontWeight: 600 }}>Chandra Symbol</div>
                   <div>{ctxEntry.Chandra}</div>
                 </>
               ) : null}
 
               {ctxEntry.Question ? (
                 <>
-                  <h4>Personal Question</h4>
+                  <div style={{ fontWeight: 600 }}>Personal Question</div>
                   <div>{ctxEntry.Question}</div>
                 </>
               ) : null}
             </div>
           ) : (
-            <div className="muted">No context found for this degree.</div>
+            <div style={{ opacity: 0.7 }}>
+              No context found for this degree.
+            </div>
           )}
         </>
       ) : (
-        <div className="muted">Click a placement to see details.</div>
+        <div style={{ opacity: 0.7 }}>Click a placement to see details.</div>
       )}
 
-      <hr className="divider" />
-
-      {/* Wave Details (bottom-half) */}
-      {waveDetails ? (
+      {/* CSV loader – gated behind toggle */}
+      {showCsvLoader && (
         <>
-          <h3>
-            Wave Details
-            <span className="badge">{waveDetails.shortId}</span>
-          </h3>
-
-          <div style={{ opacity: 0.9, marginBottom: 8 }}>
-            <div style={{ fontWeight: 600 }}>{waveDetails.title}</div>
-            <div style={{ fontSize: 12, opacity: 0.8 }}>
-              Anchors: {waveDetails.anchors.join(", ")}
-            </div>
+          <hr style={{ margin: "16px 0" }} />
+          <div style={{ fontWeight: 600, marginBottom: 8 }}>Load Context CSV</div>
+          <input type="file" accept=".csv,text/csv" onChange={onLoadCsvFromFile} />
+          <div style={{ fontSize: 12, opacity: 0.7, marginTop: 8 }}>
+            Accepted headers (case-insensitive): Wave, Degree, Sign, Planet, Note,
+            Sabian/Sabian Symbol, Chandra/Chandra Symbol, Personal Question/Question
           </div>
+        </>
+      )}
 
-          <p>{waveDetails.summary}</p>
+      {/* Core Wave details (selected via Legend) */}
+      <hr style={{ margin: "16px 0" }} />
+      {waveDetails ? (
+        <div>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+            <span
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 12,
+                background: "var(--bg-soft)",
+                border: "1px solid var(--muted)",
+                borderRadius: 6,
+                padding: "2px 6px",
+              }}
+            >
+              {waveDetails.shortId}
+            </span>
+            <h3 style={{ margin: "6px 0" }}>{waveDetails.title}</h3>
+          </div>
+          <p style={{ opacity: 0.9 }}>{waveDetails.summary}</p>
 
-          {waveDetails.keywords?.length ? (
-            <div style={{ fontSize: 12, opacity: 0.85, margin: "6px 0 10px" }}>
-              <strong>Keywords:</strong> {waveDetails.keywords.join(" · ")}
-            </div>
-          ) : null}
+          <ul style={{ display: "flex", gap: 12, padding: 0, margin: "8px 0", flexWrap: "wrap" }}>
+            <li style={{ listStyle: "none" }}>
+              <strong>Anchors:</strong> {waveDetails.anchors.join(", ")}
+            </li>
+            {waveDetails.keywords?.length ? (
+              <li style={{ listStyle: "none" }}>
+                <strong>Keywords:</strong> {waveDetails.keywords.join(" · ")}
+              </li>
+            ) : null}
+          </ul>
 
           {waveDetails.sections.map((s) => (
-            <section key={s.id} style={{ marginBottom: 12 }}>
-              <h4>{s.title}</h4>
+            <section key={s.id} style={{ padding: "6px 0" }}>
+              <h4 style={{ margin: "4px 0" }}>{s.title}</h4>
               {s.paragraphs.map((p, i) => (
-                <p key={i} style={{ margin: "4px 0" }}>
-                  {p}
-                </p>
+                <p key={i} style={{ margin: "4px 0" }}>{p}</p>
               ))}
             </section>
           ))}
-        </>
+        </div>
       ) : (
-        <div className="muted">
+        <div style={{ opacity: 0.7 }}>
           Select a Wave (via the legend) to see its details here.
         </div>
-      )}
-
-      {/* Advanced tools (dev) */}
-      {isAdvanced && (
-        <>
-          <hr className="divider" />
-          <div style={{ fontWeight: 600, marginBottom: 8 }}>
-            Load Context CSV (dev)
-          </div>
-          <input
-            type="file"
-            accept=".csv,text/csv"
-            onChange={onLoadCsvFromFile}
-          />
-          <div style={{ fontSize: 12, opacity: 0.7, marginTop: 8 }}>
-            Accepted headers (case-insensitive): Wave, Degree, Sign, Planet,
-            Note, Sabian/Sabian Symbol, Chandra/Chandra Symbol, Personal
-            Question/Question
-          </div>
-        </>
       )}
     </aside>
   );

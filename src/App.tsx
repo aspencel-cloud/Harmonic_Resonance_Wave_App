@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useMemo } from "react";
 import { initialState } from "./app/state";
 import { ContextMap, Placement } from "./app/types";
 import Wheel from "./components/Wheel/Wheel";
@@ -11,12 +11,15 @@ import { exportSvg, exportPng, exportJson, exportCsv } from "./utils/export";
 import { waveIdForDegreeWithinSign } from "./utils/mapping";
 import { useElementSize } from "./hooks/useElementSize";
 
-// NEW: context loader (reference data: Sabian/Chandra/Note/Question)
+// Built-in context loader
 import {
   fetchContextManifest,
   fetchContextCsv,
   rowsToContext,
 } from "./data/loadBuiltInContext";
+
+// Wave core descriptions (for bottom panel in Sidebar)
+import { waveDetailsById, type WaveId } from "./data/waveDetails";
 
 type Mode = "manual" | "chart";
 const LS_MANUAL = "hww.placements.manual";
@@ -31,7 +34,7 @@ function deriveAscSignFromPlacements(
   items: { planet: string; sign: string }[]
 ) {
   const asc = items.find((p) => ASC_ALIASES.has(p.planet));
-  return asc?.sign; // e.g., "Sagittarius"
+  return asc?.sign;
 }
 
 export default function App() {
@@ -76,7 +79,7 @@ export default function App() {
     } catch {}
   }, [chartPlacements]);
 
-  // NEW: autoload built-in CONTEXT once if context is empty
+  // Autoload built-in CONTEXT once if empty
   useEffect(() => {
     const skipLS = localStorage.getItem("hww.skipBuiltinContext") === "1";
     const sp = new URLSearchParams(window.location.search);
@@ -101,7 +104,7 @@ export default function App() {
       })();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // run once after initial restore
+  }, []);
 
   const placements = mode === "manual" ? manualPlacements : chartPlacements;
   const setPlacements = (updater: (prev: Placement[]) => Placement[]) => {
@@ -224,10 +227,18 @@ export default function App() {
   const [useGlyphs, setUseGlyphs] = useState(true);
   const [showHouses, setShowHouses] = useState(true);
   const [showAngles, setShowAngles] = useState(true);
-  const [showDecans, setShowDecans] = useState(false); // NEW
+  const [showDecans, setShowDecans] = useState(false);
+  const [showContextLoader, setShowContextLoader] = useState(false); // <- CSV loader toggle
 
   // derive ASC sign for HousesRing (whole-sign houses)
   const ascSign = deriveAscSignFromPlacements(placements);
+
+  // Wave details for bottom panel (Legend -> select a wave)
+  const selectedDetails = useMemo(() => {
+    return selectedWaveId
+      ? waveDetailsById[selectedWaveId as WaveId] ?? null
+      : null;
+  }, [selectedWaveId]);
 
   // tooltips
   const [tooltip, setTooltip] = useState<TooltipData | null>(null);
@@ -301,6 +312,12 @@ export default function App() {
           >
             {showDecans ? "Decans" : "No Decans"}
           </button>
+          <button
+            onClick={() => setShowContextLoader((v) => !v)}
+            title="Toggle CSV Loader"
+          >
+            {showContextLoader ? "Hide CSV Loader" : "CSV Loader"}
+          </button>
         </div>
 
         {mode === "manual" && (
@@ -338,7 +355,7 @@ export default function App() {
           </button>
           <button onClick={exportPlacementsCsv}>Export Placements CSV</button>
 
-          {/* NEW: manual reload for reference context */}
+          {/* Manual reload for reference context */}
           <button
             onClick={async () => {
               try {
@@ -378,10 +395,10 @@ export default function App() {
             onSelect={handleSelect}
             filterWaveId={selectedWaveId}
             useGlyphs={useGlyphs}
-            rotationDeg={0} // keep current behavior; we'll add ASC rotation later
+            rotationDeg={0} // ASC rotation coming next
             showHouses={showHouses}
-            showDecans={showDecans} // NEW
-            ascSign={ascSign as any} // House 1 = ASC sign (for houses ring only)
+            showDecans={showDecans}
+            ascSign={ascSign as any}
             asc={showAngles ? null : null}
             mc={showAngles ? null : null}
             onShowTooltip={showTooltipFromEvent}
@@ -390,7 +407,6 @@ export default function App() {
           <Tooltip data={tooltip} />
         </div>
 
-        {/* Bottom legend = single wave filter UI */}
         <LegendBar
           selectedWaveId={selectedWaveId}
           onSelect={setSelectedWaveId}
@@ -402,6 +418,8 @@ export default function App() {
         context={context}
         setContext={setContext}
         selected={placements.find((p) => p.id === selectedId) || null}
+        waveDetails={selectedDetails}
+        showCsvLoader={showContextLoader} // <- pass toggle
       />
     </div>
   );
