@@ -6,7 +6,11 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build && cp dist/index.html dist/404.html",
-    "preview": "vite preview --port 5173"
+    "preview": "vite preview --port 5173",
+
+    "lint": "eslint \"src/**/*.{ts,tsx,js,jsx}\" --max-warnings=0",
+    "lint:fix": "eslint \"src/**/*.{ts,tsx,js,jsx}\" --fix",
+    "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,json,css,md}\""
   },
   "dependencies": {
     "papaparse": "^5.4.1",
@@ -17,8 +21,20 @@
     "@types/papaparse": "^5.2.7",
     "@types/react": "^18.2.25",
     "@types/react-dom": "^18.2.11",
+    "@typescript-eslint/eslint-plugin": "^8.44.0",
+    "@typescript-eslint/parser": "^8.44.0",
     "@vitejs/plugin-react": "^4.3.0",
+    "eslint": "^9.35.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
+    "eslint-plugin-prettier": "^5.5.4",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "prettier": "^3.6.2",
     "typescript": "^5.5.4",
     "vite": "^5.4.2"
   }
 }
+
+
