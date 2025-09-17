@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useMemo } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { initialState } from "./app/state";
 import { ContextMap, Placement } from "./app/types";
 import Wheel from "./components/Wheel/Wheel";
@@ -11,16 +11,12 @@ import { exportSvg, exportPng, exportJson, exportCsv } from "./utils/export";
 import { waveIdForDegreeWithinSign } from "./utils/mapping";
 import { useElementSize } from "./hooks/useElementSize";
 
-// Built-in context loader (reference data: Sabian/Chandra/Note/Question)
+// NEW: context loader (reference data: Sabian/Chandra/Note/Question)
 import {
   fetchContextManifest,
   fetchContextCsv,
   rowsToContext,
 } from "./data/loadBuiltInContext";
-
-// NEW: Wave details data (static for now; can wire to CSV later)
-import { waveDetailsById, type WaveId } from "./data/waveDetails";
-// (No bottom sheet CSS in this variant since details render in Sidebar)
 
 type Mode = "manual" | "chart";
 const LS_MANUAL = "hww.placements.manual";
@@ -80,7 +76,7 @@ export default function App() {
     } catch {}
   }, [chartPlacements]);
 
-  // Autoload built-in CONTEXT once if empty
+  // NEW: autoload built-in CONTEXT once if context is empty
   useEffect(() => {
     const skipLS = localStorage.getItem("hww.skipBuiltinContext") === "1";
     const sp = new URLSearchParams(window.location.search);
@@ -167,7 +163,9 @@ export default function App() {
       const deg = Math.floor(p.degree);
       const waveId = waveIdForDegreeWithinSign(deg) ?? "";
       const ctx = waveId
-        ? context?.[`Wave${waveId}`]?.[p.sign]?.[p.planet]?.[String(deg)] ?? null
+        ? (context as any)?.[`Wave${waveId}`]?.[p.sign]?.[p.planet]?.[
+            String(deg)
+          ] ?? null
         : null;
       return {
         Planet: p.planet,
@@ -226,6 +224,7 @@ export default function App() {
   const [useGlyphs, setUseGlyphs] = useState(true);
   const [showHouses, setShowHouses] = useState(true);
   const [showAngles, setShowAngles] = useState(true);
+  const [showDecans, setShowDecans] = useState(false); // NEW
 
   // derive ASC sign for HousesRing (whole-sign houses)
   const ascSign = deriveAscSignFromPlacements(placements);
@@ -244,12 +243,6 @@ export default function App() {
   function hideTooltip() {
     setTooltip(null);
   }
-
-  // NEW: derive Wave details for Sidebar (from selectedWaveId)
-  const selectedDetails = useMemo(() => {
-    if (!selectedWaveId) return null;
-    return waveDetailsById[selectedWaveId as WaveId] ?? null;
-  }, [selectedWaveId]);
 
   return (
     <div
@@ -302,6 +295,12 @@ export default function App() {
           <button onClick={() => setShowAngles((v) => !v)}>
             {showAngles ? "Angles" : "No Angles"}
           </button>
+          <button
+            onClick={() => setShowDecans((v) => !v)}
+            title="Toggle Decans"
+          >
+            {showDecans ? "Decans" : "No Decans"}
+          </button>
         </div>
 
         {mode === "manual" && (
@@ -339,7 +338,7 @@ export default function App() {
           </button>
           <button onClick={exportPlacementsCsv}>Export Placements CSV</button>
 
-          {/* Reload reference context */}
+          {/* NEW: manual reload for reference context */}
           <button
             onClick={async () => {
               try {
@@ -379,9 +378,10 @@ export default function App() {
             onSelect={handleSelect}
             filterWaveId={selectedWaveId}
             useGlyphs={useGlyphs}
-            rotationDeg={0}
+            rotationDeg={0} // keep current behavior; we'll add ASC rotation later
             showHouses={showHouses}
-            ascSign={ascSign as any}
+            showDecans={showDecans} // NEW
+            ascSign={ascSign as any} // House 1 = ASC sign (for houses ring only)
             asc={showAngles ? null : null}
             mc={showAngles ? null : null}
             onShowTooltip={showTooltipFromEvent}
@@ -402,8 +402,6 @@ export default function App() {
         context={context}
         setContext={setContext}
         selected={placements.find((p) => p.id === selectedId) || null}
-        // NEW: pass Wave details for the bottom-half block
-        waveDetails={selectedDetails}
       />
     </div>
   );

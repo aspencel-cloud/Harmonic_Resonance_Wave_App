@@ -7,6 +7,7 @@ import HousesRing from "./HousesRing";
 import AnglesLayer from "./AnglesLayer";
 import SignSectors from "./SignSectors";
 import { Placement } from "../../app/types";
+import DecansRing from "./DecansRing"; // NEW
 
 export default function Wheel({
   size,
@@ -17,6 +18,7 @@ export default function Wheel({
   useGlyphs,
   rotationDeg = 0,
   showHouses,
+  showDecans, // NEW
   ascSign,
   asc,
   mc,
@@ -31,6 +33,7 @@ export default function Wheel({
   useGlyphs?: boolean;
   rotationDeg?: number;
   showHouses?: boolean;
+  showDecans?: boolean; // NEW
   ascSign?: any; // used by HousesRing
   asc?: { sign: any; degree: number } | null;
   mc?: { sign: any; degree: number } | null;
@@ -74,6 +77,11 @@ export default function Wheel({
         {/* ticks & labels */}
         <DegreeTicks cx={cx} cy={cy} r={rimR} />
         <SignRing cx={cx} cy={cy} r={rimR} />
+
+        {/* Decans — subtle 10° / 20° ticks per sign */}
+        {showDecans && (
+          <DecansRing cx={cx} cy={cy} r={r - 30} tickLen={6} opacity={0.45} />
+        )}
 
         {/* optional houses */}
         {showHouses && (
