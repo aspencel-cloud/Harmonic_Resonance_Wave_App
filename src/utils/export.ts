@@ -47,10 +47,7 @@ function inlineSvgStyles(svg: SVGSVGElement): string {
   const height = Number(svg.getAttribute("height")) || bbox.height || 800;
   clone.setAttribute("width", String(width));
   clone.setAttribute("height", String(height));
-  clone.setAttribute(
-    "viewBox",
-    svg.getAttribute("viewBox") || `0 0 ${width} ${height}`
-  );
+  clone.setAttribute("viewBox", svg.getAttribute("viewBox") || `0 0 ${width} ${height}`);
 
   const serializer = new XMLSerializer();
   const svgStr = serializer.serializeToString(clone);
@@ -58,21 +55,14 @@ function inlineSvgStyles(svg: SVGSVGElement): string {
 }
 
 // ---------- public API ----------
-export function exportSvg(
-  svgEl?: SVGSVGElement | null,
-  filename = "wheel.svg"
-) {
+export function exportSvg(svgEl?: SVGSVGElement | null, filename = "wheel.svg") {
   const svg = ensureSvg(svgEl);
   const svgStr = inlineSvgStyles(svg);
   const blob = new Blob([svgStr], { type: "image/svg+xml;charset=utf-8" });
   downloadBlob(blob, filename);
 }
 
-export function exportPng(
-  svgEl?: SVGSVGElement | null,
-  filename = "wheel.png",
-  scale = 2
-) {
+export function exportPng(svgEl?: SVGSVGElement | null, filename = "wheel.png", scale = 2) {
   const svg = ensureSvg(svgEl);
   const svgStr = inlineSvgStyles(svg);
   const svgBlob = new Blob([svgStr], { type: "image/svg+xml;charset=utf-8" });
@@ -122,10 +112,7 @@ export function exportCsv(rows: Row[], filename = "data.csv") {
   if (!rows || !rows.length) {
     // still create an empty file with UTF-8 BOM so Excel opens it cleanly
     const empty = "\uFEFF";
-    downloadBlob(
-      new Blob([empty], { type: "text/csv;charset=utf-8" }),
-      filename
-    );
+    downloadBlob(new Blob([empty], { type: "text/csv;charset=utf-8" }), filename);
     return;
   }
   // Build union of all keys so columns don't disappear when some rows lack fields
@@ -141,10 +128,7 @@ export function exportCsv(rows: Row[], filename = "data.csv") {
     return s;
   };
 
-  const lines = [
-    headers.join(","),
-    ...rows.map((r) => headers.map((h) => escape(r[h])).join(",")),
-  ];
+  const lines = [headers.join(","), ...rows.map((r) => headers.map((h) => escape(r[h])).join(","))];
 
   // UTF-8 BOM for Excel
   const csv = "\uFEFF" + lines.join("\n");

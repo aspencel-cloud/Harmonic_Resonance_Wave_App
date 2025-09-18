@@ -1,4 +1,5 @@
 import React from "react";
+
 import { SIGNS } from "../../data/signs";
 import { WAVES, getWaveName } from "../../data/waves";
 import { signDegreeToAngle } from "../../utils/mapping";
@@ -20,9 +21,7 @@ export default function WavesLayer({
   onShowTooltip?: (e: React.MouseEvent<SVGElement>, html: string) => void;
   onHideTooltip?: () => void;
 }) {
-  const wavesToRender = filterWaveId
-    ? WAVES.filter((w) => w.id === filterWaveId)
-    : WAVES;
+  const wavesToRender = filterWaveId ? WAVES.filter((w) => w.id === filterWaveId) : WAVES;
 
   return (
     <g>

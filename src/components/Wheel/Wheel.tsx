@@ -1,4 +1,7 @@
 import React from "react";
+
+import { Placement } from "../../app/types";
+
 import DegreeTicks from "./DegreeTicks";
 import SignRing from "./SignRing";
 import WavesLayer from "./WavesLayer";
@@ -6,7 +9,6 @@ import PlacementsLayer from "./PlacementsLayer";
 import HousesRing from "./HousesRing";
 import AnglesLayer from "./AnglesLayer";
 import SignSectors from "./SignSectors";
-import { Placement } from "../../app/types";
 import DecansRing from "./DecansRing"; // NEW
 
 export default function Wheel({
@@ -55,47 +57,25 @@ export default function Wheel({
   return (
     <svg width="100%" height="100%" viewBox={`0 0 ${size} ${size}`}>
       {/* background circle */}
-      <circle
-        cx={cx}
-        cy={cy}
-        r={r}
-        fill="transparent"
-        stroke="var(--ring)"
-        strokeWidth={1}
-      />
+      <circle cx={cx} cy={cy} r={r} fill="transparent" stroke="var(--ring)" strokeWidth={1} />
 
       {/* rotate the whole wheel if needed */}
       <g transform={`rotate(${rotationDeg} ${cx} ${cy})`}>
         {/* sign wedges + cusp strokes */}
-        <SignSectors
-          cx={cx}
-          cy={cy}
-          rOuter={sectorsOuter}
-          rInner={sectorsInner}
-        />
+        <SignSectors cx={cx} cy={cy} rOuter={sectorsOuter} rInner={sectorsInner} />
 
         {/* ticks & labels */}
         <DegreeTicks cx={cx} cy={cy} r={rimR} />
         <SignRing cx={cx} cy={cy} r={rimR} />
 
         {/* Decans — subtle 10° / 20° ticks per sign */}
-        {showDecans && (
-          <DecansRing cx={cx} cy={cy} r={r - 30} tickLen={6} opacity={0.45} />
-        )}
+        {showDecans && <DecansRing cx={cx} cy={cy} r={r - 30} tickLen={6} opacity={0.45} />}
 
         {/* optional houses */}
-        {showHouses && (
-          <HousesRing cx={cx} cy={cy} r={r - 72} ascSign={ascSign} />
-        )}
+        {showHouses && <HousesRing cx={cx} cy={cy} r={r - 72} ascSign={ascSign} />}
 
         {/* angles (ASC/MC) */}
-        <AnglesLayer
-          cx={cx}
-          cy={cy}
-          r={r - 58}
-          asc={asc || undefined}
-          mc={mc || undefined}
-        />
+        <AnglesLayer cx={cx} cy={cy} r={r - 58} asc={asc || undefined} mc={mc || undefined} />
 
         {/* wave dots */}
         <WavesLayer

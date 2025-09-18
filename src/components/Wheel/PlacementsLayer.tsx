@@ -1,9 +1,7 @@
 import React from "react";
+
 import { Placement } from "../../app/types";
-import {
-  signDegreeToAngle,
-  waveIdForDegreeWithinSign,
-} from "../../utils/mapping";
+import { signDegreeToAngle, waveIdForDegreeWithinSign } from "../../utils/mapping";
 import { polarToCartesian } from "../../utils/geometry";
 import { PLANET_GLYPH } from "../../data/glyphs";
 import { getWaveColor } from "../../data/waveColors";
@@ -70,10 +68,7 @@ export default function PlacementsLayer({
 
     // Dynamic total spread in degrees (cap at MAX_FAN_DEG)
     // Example: n=2 => around ~3.8°, n=5 => ~7°, n>=10 => capped near 10°
-    const totalSpread = Math.min(
-      MAX_FAN_DEG,
-      BASE_SPREAD_DEG + n * SPREAD_PER_ITEM
-    );
+    const totalSpread = Math.min(MAX_FAN_DEG, BASE_SPREAD_DEG + n * SPREAD_PER_ITEM);
 
     // If only one element, no angular offset; otherwise distribute across the total spread
     const denom = Math.max(n - 1, 1);
@@ -98,9 +93,7 @@ export default function PlacementsLayer({
 
       const html =
         `<b>${p.planet}</b> — ${p.sign} ${d}°` +
-        (wave
-          ? `<br/><i>Wave ${wave}${waveName ? ` — ${waveName}` : ""}</i>`
-          : "");
+        (wave ? `<br/><i>Wave ${wave}${waveName ? ` — ${waveName}` : ""}</i>` : "");
 
       const isSelected = selectedId === p.id;
 
@@ -115,13 +108,7 @@ export default function PlacementsLayer({
         >
           {useGlyphs ? (
             <>
-              <circle
-                cx={x}
-                cy={y}
-                r={12}
-                fill="var(--bg)"
-                opacity={isSelected ? 0.95 : 0.85}
-              />
+              <circle cx={x} cy={y} r={12} fill="var(--bg)" opacity={isSelected ? 0.95 : 0.85} />
               <text
                 x={x}
                 y={y + 5}
@@ -137,14 +124,7 @@ export default function PlacementsLayer({
                 {glyph}
               </text>
               {isSelected && (
-                <circle
-                  cx={x}
-                  cy={y}
-                  r={14}
-                  fill="none"
-                  stroke="var(--accent)"
-                  strokeWidth={2.5}
-                />
+                <circle cx={x} cy={y} r={14} fill="none" stroke="var(--accent)" strokeWidth={2.5} />
               )}
             </>
           ) : (

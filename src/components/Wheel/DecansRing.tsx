@@ -16,7 +16,7 @@ export default function DecansRing({
 }: {
   cx: number;
   cy: number;
-  r: number;       // radius where ticks end (outer)
+  r: number; // radius where ticks end (outer)
   tickLen?: number; // length of ticks inward
   opacity?: number;
 }) {

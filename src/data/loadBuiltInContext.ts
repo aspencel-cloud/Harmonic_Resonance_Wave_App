@@ -1,5 +1,7 @@
 import Papa from "papaparse";
+
 import type { ContextMap } from "../app/types";
+
 import { normSign, normPlanet } from "./aliases";
 
 type Manifest = { version: string; dataset: string };
@@ -16,8 +18,7 @@ function withBase(relPath: string): string {
 export async function fetchContextManifest(): Promise<Manifest> {
   const url = withBase("data/context_manifest.json");
   const res = await fetch(url, { cache: "no-store" });
-  if (!res.ok)
-    throw new Error(`Failed to fetch context manifest: ${res.status}`);
+  if (!res.ok) throw new Error(`Failed to fetch context manifest: ${res.status}`);
   return (await res.json()) as Manifest;
 }
 
@@ -92,9 +93,7 @@ export async function fetchContextCsv(path: string): Promise<RawRow[]> {
   // Guard: wrong path returns HTML
   const head = text.slice(0, 200).toLowerCase();
   if (head.includes("<!doctype html") || head.includes("<html")) {
-    console.error(
-      `[CTX] ${url} returned HTML (not CSV). Check manifest dataset path.`
-    );
+    console.error(`[CTX] ${url} returned HTML (not CSV). Check manifest dataset path.`);
     throw new Error("Context CSV path returned HTML, not CSV.");
   }
 
@@ -113,9 +112,7 @@ export async function fetchContextCsv(path: string): Promise<RawRow[]> {
   const valids = attempts.filter((a) => a.valid);
   if (!valids.length) {
     console.error("[CTX] No valid parse candidates found.");
-    const best = attempts
-      .slice()
-      .sort((a, b) => b.rows.length - a.rows.length)[0];
+    const best = attempts.slice().sort((a, b) => b.rows.length - a.rows.length)[0];
     console.log(
       `[CTX] fallback to delimiter ${JSON.stringify(
         best.delimiterTried
@@ -131,10 +128,7 @@ export async function fetchContextCsv(path: string): Promise<RawRow[]> {
     )})`
   );
   if (best.warnings?.length) {
-    console.warn(
-      "[CTX] CSV parse warnings (first 5):",
-      best.warnings.slice(0, 5)
-    );
+    console.warn("[CTX] CSV parse warnings (first 5):", best.warnings.slice(0, 5));
   }
   return best.rows;
 }

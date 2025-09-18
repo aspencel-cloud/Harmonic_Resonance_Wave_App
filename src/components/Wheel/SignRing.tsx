@@ -1,17 +1,10 @@
 import React from "react";
+
 import { SIGNS } from "../../data/signs";
 import { signDegreeToAngle } from "../../utils/mapping";
 import { polarToCartesian } from "../../utils/geometry";
 
-export default function SignRing({
-  cx,
-  cy,
-  r,
-}: {
-  cx: number;
-  cy: number;
-  r: number;
-}) {
+export default function SignRing({ cx, cy, r }: { cx: number; cy: number; r: number }) {
   const labelR = r - 32;
 
   return (

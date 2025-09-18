@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+
 import { Placement } from "../../app/types";
 import { parseRawInput } from "../../utils/raw";
 
@@ -31,7 +32,14 @@ export default function RawImport({
           value={text}
           onChange={(e) => setText(e.target.value)}
           rows={8}
-          style={{ width: "100%", fontFamily: "monospace" }}
+          style={{
+            width: "100%",
+            maxWidth: "720px", // cap width so it doesn’t stretch across the page
+            height: "140px", // keep it compact
+            fontFamily: "monospace",
+            resize: "vertical",
+            boxSizing: "border-box",
+          }}
           placeholder={`Sun in Aquarius 26°24’, in 3rd House\nMoon in Aquarius 26°18’, in 3rd House\n...`}
         />
         <div style={{ display: "flex", gap: 8, marginTop: 6 }}>

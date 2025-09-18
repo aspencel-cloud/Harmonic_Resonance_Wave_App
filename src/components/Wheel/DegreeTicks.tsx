@@ -1,17 +1,10 @@
 import React from "react";
+
 import { SIGNS } from "../../data/signs";
 import { signDegreeToAngle } from "../../utils/mapping";
 import { polarToCartesian } from "../../utils/geometry";
 
-export default function DegreeTicks({
-  cx,
-  cy,
-  r,
-}: {
-  cx: number;
-  cy: number;
-  r: number;
-}) {
+export default function DegreeTicks({ cx, cy, r }: { cx: number; cy: number; r: number }) {
   const outer = r;
   const major = r - 10;
   const minor = r - 6;
@@ -33,13 +26,7 @@ export default function DegreeTicks({
           y1={p1.y}
           x2={p2.x}
           y2={p2.y}
-          stroke={
-            d === 0
-              ? "var(--tick-strong)"
-              : d % 5 === 0
-              ? "var(--tick)"
-              : "var(--ring)"
-          }
+          stroke={d === 0 ? "var(--tick-strong)" : d % 5 === 0 ? "var(--tick)" : "var(--ring)"}
           strokeWidth={d === 0 ? 1.6 : d % 5 === 0 ? 1.2 : 1}
           opacity={0.9}
         />

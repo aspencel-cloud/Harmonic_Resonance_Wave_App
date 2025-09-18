@@ -1,4 +1,5 @@
 import React from "react";
+
 import { WAVES } from "../../data/waves";
 import { getWaveColor } from "../../data/waveColors";
 
@@ -10,13 +11,9 @@ export default function WaveBar({
   selectedWaveId?: number | null;
 }) {
   return (
-    <div
-      style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}
-    >
+    <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
       {WAVES.map((w) => {
-        const label = `${w.label} — ${w.degrees
-          .map((d) => `${d}°`)
-          .join(", ")}`;
+        const label = `${w.label} — ${w.degrees.map((d) => `${d}°`).join(", ")}`;
         const isActive = selectedWaveId === w.id;
         const color = getWaveColor(w.id);
 

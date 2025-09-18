@@ -1,4 +1,5 @@
 import React from "react";
+
 import { WAVE_DEGREE_ANCHORS, WAVE_NAMES } from "../../data/waves";
 import { getWaveColor } from "../../data/waveColors";
 

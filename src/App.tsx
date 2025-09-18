@@ -1,13 +1,15 @@
 import React, { useEffect, useRef, useState, useMemo } from "react";
+
 import { initialState } from "./app/state";
 import { ContextMap, Placement } from "./app/types";
 import Wheel from "./components/Wheel/Wheel";
 import Sidebar from "./components/Sidebar/Sidebar";
 import Controls from "./components/Controls/Controls";
-import RawImport from "./components/Controls/RawImport";
+import RawImport from "./components/Controls/RawImport"; // kept for chart mode via Controls props (optional)
 import LegendBar from "./components/Controls/LegendBar";
 import Tooltip, { TooltipData } from "./components/common/Tooltip";
-import { exportSvg, exportPng, exportJson, exportCsv } from "./utils/export";
+// ❌ removed direct export helpers here; Controls menu calls them internally
+// import { exportSvg, exportPng, exportJson, exportCsv } from "./utils/export";
 import { waveIdForDegreeWithinSign } from "./utils/mapping";
 import { useElementSize } from "./hooks/useElementSize";
 
@@ -149,9 +151,7 @@ export default function App() {
           return {
             ...it,
             degree: deg,
-            id: `${it.planet}-${it.sign}-${deg}-${Math.random()
-              .toString(36)
-              .slice(2, 7)}`,
+            id: `${it.planet}-${it.sign}-${deg}-${Math.random().toString(36).slice(2, 7)}`,
           } as Placement;
         })
         .filter(Boolean) as Placement[];
@@ -160,15 +160,15 @@ export default function App() {
     });
   }
 
-  // export
-  function exportPlacementsCsv() {
-    const rows = placements.map((p) => {
+  // ----- Data providers for export menu -----
+  function getExportCSVRows() {
+    return placements.map((p) => {
       const deg = Math.floor(p.degree);
       const waveId = waveIdForDegreeWithinSign(deg) ?? "";
       const ctx = waveId
-        ? (context as any)?.[`Wave${waveId}`]?.[p.sign]?.[p.planet]?.[
+        ? ((context as any)?.[`Wave${waveId}`]?.[p.sign]?.[p.planet]?.[
             String(deg)
-          ] ?? null
+          ] ?? null)
         : null;
       return {
         Planet: p.planet,
@@ -181,10 +181,9 @@ export default function App() {
         PersonalQuestion: (ctx as any)?.Question ?? "",
       };
     });
-    exportCsv(
-      rows,
-      mode === "manual" ? "placements-manual.csv" : "placements-chart.csv"
-    );
+  }
+  function getExportJSON() {
+    return { context, mode, manualPlacements, chartPlacements };
   }
 
   // selection -> auto wave filter
@@ -236,7 +235,7 @@ export default function App() {
   // Wave details for bottom panel (Legend -> select a wave)
   const selectedDetails = useMemo(() => {
     return selectedWaveId
-      ? waveDetailsById[selectedWaveId as WaveId] ?? null
+      ? (waveDetailsById[selectedWaveId as WaveId] ?? null)
       : null;
   }, [selectedWaveId]);
 
@@ -253,6 +252,22 @@ export default function App() {
   }
   function hideTooltip() {
     setTooltip(null);
+  }
+
+  // loader moved into Controls via onLoadBuiltInContext
+  async function loadBuiltInContext() {
+    try {
+      const manifest = await fetchContextManifest();
+      console.log("[CTX] manifest", manifest);
+      const raw = await fetchContextCsv(manifest.dataset);
+      const loaded = rowsToContext(raw);
+      setContext(loaded);
+      localStorage.setItem("hww.ctx.version", manifest.version);
+      alert(`Built-in context v${manifest.version} loaded.`);
+    } catch (e: any) {
+      console.error("[CTX] load failed:", e);
+      alert(`Failed to load built-in context:\n${e?.message || e}`);
+    }
   }
 
   return (
@@ -320,93 +335,69 @@ export default function App() {
           </button>
         </div>
 
-        {mode === "manual" && (
-          <Controls onAdd={addPlacement} onClear={clearPlacements} />
-        )}
-        {mode === "chart" && <RawImport onImport={addManyRaw} />}
-
-        {/* Actions */}
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <button
-            onClick={() => {
-              const svg = document.querySelector("svg") as SVGSVGElement | null;
-              if (svg) exportSvg(svg, "wheel.svg");
-            }}
-          >
-            Export SVG
-          </button>
-          <button
-            onClick={() => {
-              const svg = document.querySelector("svg") as SVGSVGElement | null;
-              if (svg) exportPng(svg, "wheel.png", 2);
-            }}
-          >
-            Export PNG
-          </button>
-          <button
-            onClick={() =>
-              exportJson(
-                { context, mode, manualPlacements, chartPlacements },
-                "state.json"
-              )
-            }
-          >
-            Export JSON
-          </button>
-          <button onClick={exportPlacementsCsv}>Export Placements CSV</button>
-
-          {/* Manual reload for reference context */}
-          <button
-            onClick={async () => {
-              try {
-                const manifest = await fetchContextManifest();
-                console.log("[CTX] manifest", manifest);
-                const raw = await fetchContextCsv(manifest.dataset);
-                const loaded = rowsToContext(raw);
-                setContext(loaded);
-                localStorage.setItem("hww.ctx.version", manifest.version);
-                alert(`Built-in context v${manifest.version} loaded.`);
-              } catch (e: any) {
-                console.error("[CTX] load failed:", e);
-                alert(`Failed to load built-in context:\n${e?.message || e}`);
-              }
-            }}
-          >
-            Load Built-in Context
-          </button>
-
-          <button onClick={deleteSelected} disabled={!selectedId}>
-            Delete Selected
-          </button>
-          <button onClick={clearPlacements} disabled={!placements.length}>
-            Clear
-          </button>
-        </div>
-
-        {/* Wheel + tooltip overlay */}
+        {/* MIDDLE: Controls (left) + Wheel (right) */}
         <div
-          ref={wheelRef}
-          style={{ position: "relative", flex: 1, minHeight: 0 }}
+          style={{
+            display: "grid",
+            gridTemplateColumns: "minmax(260px, 560px) 1fr",
+            gap: 16,
+            alignItems: "start",
+            // this row stretches to fill all available height:
+            flex: 1,
+            minHeight: 0,
+          }}
         >
-          <Wheel
-            size={wheelSize}
-            placements={placements}
-            selectedId={selectedId}
-            onSelect={handleSelect}
-            filterWaveId={selectedWaveId}
-            useGlyphs={useGlyphs}
-            rotationDeg={0} // ASC rotation coming next
-            showHouses={showHouses}
-            showDecans={showDecans}
-            ascSign={ascSign as any}
-            asc={showAngles ? null : null}
-            mc={showAngles ? null : null}
-            onShowTooltip={showTooltipFromEvent}
-            onHideTooltip={hideTooltip}
-          />
-          <Tooltip data={tooltip} />
+          {/* LEFT COLUMN: controls stack */}
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 8,
+              minWidth: 0,
+            }}
+          >
+            <Controls
+              onAdd={addPlacement}
+              onClear={clearPlacements}
+              onImport={mode === "chart" ? addManyRaw : undefined}
+              onLoadBuiltInContext={loadBuiltInContext}
+              getExportJSON={() => getExportJSON()}
+              getExportCSV={() => getExportCSVRows()}
+            />
+          </div>
+          {/* RIGHT COLUMN: wheel gets the full remaining space */}
+          <div
+            ref={wheelRef}
+            style={{
+              position: "relative",
+              minWidth: 0,
+              minHeight: 0,
+              height: "100%", // <- give useElementSize full height to work with
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Wheel
+              size={wheelSize}
+              placements={placements}
+              selectedId={selectedId}
+              onSelect={handleSelect}
+              filterWaveId={selectedWaveId}
+              useGlyphs={useGlyphs}
+              rotationDeg={0}
+              showHouses={showHouses}
+              showDecans={showDecans}
+              ascSign={ascSign as any}
+              asc={showAngles ? null : null}
+              mc={showAngles ? null : null}
+              onShowTooltip={showTooltipFromEvent}
+              onHideTooltip={hideTooltip}
+            />
+            <Tooltip data={tooltip} />
+          </div>
         </div>
-
+        {/* BOTTOM: legend stays at the bottom */}
         <LegendBar
           selectedWaveId={selectedWaveId}
           onSelect={setSelectedWaveId}

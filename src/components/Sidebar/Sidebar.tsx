@@ -1,4 +1,5 @@
 import React from "react";
+
 import type { ContextMap, Placement } from "../../app/types";
 import { waveIdForDegreeWithinSign } from "../../utils/mapping";
 import { getWaveName } from "../../data/waves";
@@ -179,11 +180,18 @@ export default function Sidebar({
       {showCsvLoader && (
         <>
           <hr style={{ margin: "16px 0" }} />
-          <div style={{ fontWeight: 600, marginBottom: 8 }}>Load Context CSV</div>
-          <input type="file" accept=".csv,text/csv" onChange={onLoadCsvFromFile} />
+          <div style={{ fontWeight: 600, marginBottom: 8 }}>
+            Load Context CSV
+          </div>
+          <input
+            type="file"
+            accept=".csv,text/csv"
+            onChange={onLoadCsvFromFile}
+          />
           <div style={{ fontSize: 12, opacity: 0.7, marginTop: 8 }}>
-            Accepted headers (case-insensitive): Wave, Degree, Sign, Planet, Note,
-            Sabian/Sabian Symbol, Chandra/Chandra Symbol, Personal Question/Question
+            Accepted headers (case-insensitive): Wave, Degree, Sign, Planet,
+            Note, Sabian/Sabian Symbol, Chandra/Chandra Symbol, Personal
+            Question/Question
           </div>
         </>
       )}
@@ -211,7 +219,15 @@ export default function Sidebar({
           </div>
           <p style={{ opacity: 0.9 }}>{waveDetails.summary}</p>
 
-          <ul style={{ display: "flex", gap: 12, padding: 0, margin: "8px 0", flexWrap: "wrap" }}>
+          <ul
+            style={{
+              display: "flex",
+              gap: 12,
+              padding: 0,
+              margin: "8px 0",
+              flexWrap: "wrap",
+            }}
+          >
             <li style={{ listStyle: "none" }}>
               <strong>Anchors:</strong> {waveDetails.anchors.join(", ")}
             </li>
@@ -226,7 +242,9 @@ export default function Sidebar({
             <section key={s.id} style={{ padding: "6px 0" }}>
               <h4 style={{ margin: "4px 0" }}>{s.title}</h4>
               {s.paragraphs.map((p, i) => (
-                <p key={i} style={{ margin: "4px 0" }}>{p}</p>
+                <p key={i} style={{ margin: "4px 0" }}>
+                  {p}
+                </p>
               ))}
             </section>
           ))}

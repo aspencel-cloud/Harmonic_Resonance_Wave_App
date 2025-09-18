@@ -143,8 +143,7 @@ export const waveDetailsById: Record<WaveId, WaveDetails> = {
   3: {
     ...waves[2],
     title: "Wave 3 — The Spiral Initiate (3°, 13°, 23°)",
-    summary:
-      "The Spiral Walker — iterative growth that returns to themes at deeper levels.",
+    summary: "The Spiral Walker — iterative growth that returns to themes at deeper levels.",
     keywords: ["Iteration", "Layers", "Deep Learning", "Recursion"],
     sections: [
       {
@@ -173,8 +172,7 @@ export const waveDetailsById: Record<WaveId, WaveDetails> = {
   4: {
     ...waves[3],
     title: "Wave 4 — The Mystic Arc (7°, 17°, 27°)",
-    summary:
-      "The Steady Builder / Intuitive — attuned to sacred patterns beneath life’s surface.",
+    summary: "The Steady Builder / Intuitive — attuned to sacred patterns beneath life’s surface.",
     keywords: ["Pattern Sense", "Intuition", "Meaning", "Cycles"],
     sections: [
       {
@@ -203,8 +201,7 @@ export const waveDetailsById: Record<WaveId, WaveDetails> = {
   5: {
     ...waves[4],
     title: "Wave 5 — The Edge Dancers (9°, 19°, 29°)",
-    summary:
-      "The Threshold Keeper — lives at endings/beginnings and guides crossing points.",
+    summary: "The Threshold Keeper — lives at endings/beginnings and guides crossing points.",
     keywords: ["Thresholds", "Change", "Courage", "Crossing"],
     sections: [
       {
@@ -233,8 +230,7 @@ export const waveDetailsById: Record<WaveId, WaveDetails> = {
   6: {
     ...waves[5],
     title: "Wave 6 — The Bridge Builders (2°, 12°, 22°)",
-    summary:
-      "The Bridge — connects people, ideas, and worlds into coherent wholes.",
+    summary: "The Bridge — connects people, ideas, and worlds into coherent wholes.",
     keywords: ["Bridge", "Diplomacy", "Translation", "Cooperation"],
     sections: [
       {
@@ -263,8 +259,7 @@ export const waveDetailsById: Record<WaveId, WaveDetails> = {
   7: {
     ...waves[6],
     title: "Wave 7 — The Heart Weavers (4°, 14°, 24°)",
-    summary:
-      "The Heart Weaver — builds bonds, belonging, and resilient communities.",
+    summary: "The Heart Weaver — builds bonds, belonging, and resilient communities.",
     keywords: ["Care", "Belonging", "Trust", "Community"],
     sections: [
       {
@@ -293,8 +288,7 @@ export const waveDetailsById: Record<WaveId, WaveDetails> = {
   8: {
     ...waves[7],
     title: "Wave 8 — The Crystal Initiates (6°, 16°, 26°)",
-    summary:
-      "The Crystal — brings natural clarity and structure; organizes complexity.",
+    summary: "The Crystal — brings natural clarity and structure; organizes complexity.",
     keywords: ["Structure", "Clarity", "Order", "Systems"],
     sections: [
       {
@@ -323,8 +317,7 @@ export const waveDetailsById: Record<WaveId, WaveDetails> = {
   9: {
     ...waves[8],
     title: "Wave 9 — The Harvesters (8°, 18°, 28°)",
-    summary:
-      "The Harvester — gathers lessons, preserves what’s valuable, and closes cycles.",
+    summary: "The Harvester — gathers lessons, preserves what’s valuable, and closes cycles.",
     keywords: ["Legacy", "Lessons", "Closure", "Wisdom"],
     sections: [
       {
@@ -353,8 +346,7 @@ export const waveDetailsById: Record<WaveId, WaveDetails> = {
   10: {
     ...waves[9],
     title: "Wave 10 — The Genesis Mirrors (1°, 11°, 21°)",
-    summary:
-      "The Mirror Gate — reset points that invite renewal and fresh cycles.",
+    summary: "The Mirror Gate — reset points that invite renewal and fresh cycles.",
     keywords: ["Reset", "Renewal", "Choice", "Crossroads"],
     sections: [
       {

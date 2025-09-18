@@ -39,15 +39,7 @@ const ELEMENTAL_SEQUENCES: Record<string, [string, string, string]> = {
 };
 
 // Chaldean rulers (Faces) starting from Aries: Mars, Sun, Venus, Mercury, Moon, Saturn, Jupiter (repeat)
-const CHALDEAN_SEQUENCE = [
-  "Mars",
-  "Sun",
-  "Venus",
-  "Mercury",
-  "Moon",
-  "Saturn",
-  "Jupiter",
-];
+const CHALDEAN_SEQUENCE = ["Mars", "Sun", "Venus", "Mercury", "Moon", "Saturn", "Jupiter"];
 // Precompute 36 decans’ rulers (0 = Aries 0–9°, 1 = Aries 10–19°, ..., 35 = Pisces 20–29°)
 const CHALDEAN_RULERS: string[] = Array.from({ length: 36 }, (_, i) => {
   return CHALDEAN_SEQUENCE[i % CHALDEAN_SEQUENCE.length];
@@ -81,9 +73,7 @@ export function getDecanInfo(
   if (system === "modern_elemental") {
     const seq = ELEMENTAL_SEQUENCES[s];
     const secondary = seq ? seq[idx - 1] : undefined;
-    const label = secondary
-      ? `Decan ${idx} (${secondary} influence)`
-      : `Decan ${idx}`;
+    const label = secondary ? `Decan ${idx} (${secondary} influence)` : `Decan ${idx}`;
     return { index: idx, startDeg, endDeg, label, secondary };
   }
 

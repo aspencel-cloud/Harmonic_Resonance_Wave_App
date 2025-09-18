@@ -77,9 +77,7 @@ function normalizeLine(line: string): string {
 }
 
 function toPlanet(name: string): Planet | null {
-  const key = Object.keys(ALIAS).find(
-    (k) => k.toLowerCase() === name.toLowerCase()
-  );
+  const key = Object.keys(ALIAS).find((k) => k.toLowerCase() === name.toLowerCase());
   return key ? ALIAS[key] : null;
 }
 
