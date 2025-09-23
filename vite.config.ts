@@ -1,12 +1,8 @@
+// vite.config.ts
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   plugins: [react()],
-  base: "/Harmonic_Resonance_Wave_App/",
-  server: {
-    port: 5173,
-    open: true,
-    allowedHosts: [".csb.app"], // allow CodeSandbox preview hosts
-  },
-});
+  base: mode === "production" ? "/Harmonic_Resonance_Wave_App/" : "/",
+}));

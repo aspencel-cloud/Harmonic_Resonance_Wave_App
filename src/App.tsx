@@ -8,19 +8,15 @@ import Controls from "./components/Controls/Controls";
 import RawImport from "./components/Controls/RawImport"; // kept for chart mode via Controls props (optional)
 import LegendBar from "./components/Controls/LegendBar";
 import Tooltip, { TooltipData } from "./components/common/Tooltip";
-// ❌ removed direct export helpers here; Controls menu calls them internally
-// import { exportSvg, exportPng, exportJson, exportCsv } from "./utils/export";
 import { waveIdForDegreeWithinSign } from "./utils/mapping";
 import { useElementSize } from "./hooks/useElementSize";
 
-// Built-in context loader
 import {
   fetchContextManifest,
   fetchContextCsv,
   rowsToContext,
 } from "./data/loadBuiltInContext";
 
-// Wave core descriptions (for bottom panel in Sidebar)
 import { waveDetailsById, type WaveId } from "./data/waveDetails";
 
 type Mode = "manual" | "chart";
@@ -28,10 +24,7 @@ const LS_MANUAL = "hww.placements.manual";
 const LS_CHART = "hww.placements.chart";
 const LS_THEME = "hww.theme";
 
-// Accept common ASC labels found in raw data
 const ASC_ALIASES = new Set(["ASC", "Asc", "Ascendant", "Asc."]);
-
-// Find the ASC sign from current placements (manual or chart)
 function deriveAscSignFromPlacements(
   items: { planet: string; sign: string }[]
 ) {
@@ -45,7 +38,9 @@ export default function App() {
   const [manualPlacements, setManualPlacements] = useState<Placement[]>([]);
   const [chartPlacements, setChartPlacements] = useState<Placement[]>([]);
   const [selectedId, setSelectedId] = useState<string | undefined>();
-  const [selectedWaveId, setSelectedWaveId] = useState<number | null>(null);
+
+  // NEW: user “browsing” wave from legend
+  const [browseWaveId, setBrowseWaveId] = useState<number | null>(null);
 
   // theme
   const [theme, setTheme] = useState<"light" | "dark">(
@@ -59,7 +54,7 @@ export default function App() {
     document.documentElement.setAttribute("data-theme", theme);
   }, [theme]);
 
-  // restore/persist
+  // restore/persist placements
   useEffect(() => {
     try {
       const rawM = localStorage.getItem(LS_MANUAL);
@@ -124,17 +119,18 @@ export default function App() {
         : [...prev, { ...p, degree: deg }]
     );
     setSelectedId(p.id);
+    setBrowseWaveId(null); // tie sidebar back to placement wave
   }
   function clearPlacements() {
     setPlacements(() => []);
     setSelectedId(undefined);
-    setSelectedWaveId(null);
+    setBrowseWaveId(null);
   }
   function deleteSelected() {
     if (!selectedId) return;
     setPlacements((prev) => prev.filter((p) => p.id !== selectedId));
     setSelectedId(undefined);
-    setSelectedWaveId(null);
+    setBrowseWaveId(null);
   }
   function addManyRaw(items: Omit<Placement, "id">[]) {
     if (mode !== "chart" || !items.length) return;
@@ -151,16 +147,18 @@ export default function App() {
           return {
             ...it,
             degree: deg,
-            id: `${it.planet}-${it.sign}-${deg}-${Math.random().toString(36).slice(2, 7)}`,
+            id: `${it.planet}-${it.sign}-${deg}-${Math.random()
+              .toString(36)
+              .slice(2, 7)}`,
           } as Placement;
         })
         .filter(Boolean) as Placement[];
       if (append.length) setSelectedId(append[append.length - 1].id);
       return [...prev, ...append];
     });
+    setBrowseWaveId(null);
   }
 
-  // ----- Data providers for export menu -----
   function getExportCSVRows() {
     return placements.map((p) => {
       const deg = Math.floor(p.degree);
@@ -186,60 +184,52 @@ export default function App() {
     return { context, mode, manualPlacements, chartPlacements };
   }
 
-  // selection -> auto wave filter
+  // selection -> auto wave filter + browsing reset
   function handleSelect(nextId?: string) {
     if (nextId && nextId === selectedId) {
       setSelectedId(undefined);
-      setSelectedWaveId(null);
+      setBrowseWaveId(null);
       return;
     }
     setSelectedId(nextId);
-
-    if (!nextId) {
-      setSelectedWaveId(null);
-      return;
-    }
-    const p = placements.find((x) => x.id === nextId);
-    if (!p) {
-      setSelectedWaveId(null);
-      return;
-    }
-    const wave = waveIdForDegreeWithinSign(Math.floor(p.degree));
-    setSelectedWaveId(wave ?? null);
+    setBrowseWaveId(null); // selecting a placement re-ties the sidebar
   }
 
-  // mode switch
   function switchMode(next: Mode) {
     if (next !== mode) {
       setMode(next);
       setSelectedId(undefined);
-      setSelectedWaveId(null);
+      setBrowseWaveId(null);
     }
   }
 
-  // responsive sizing + tooltip positioning
   const wheelRef = useRef<HTMLDivElement | null>(null);
   const { width, height } = useElementSize(wheelRef.current);
   const wheelSize = Math.max(240, Math.floor(Math.min(width, height) - 16));
 
-  // glyphs + overlays
   const [useGlyphs, setUseGlyphs] = useState(true);
   const [showHouses, setShowHouses] = useState(true);
   const [showAngles, setShowAngles] = useState(true);
   const [showDecans, setShowDecans] = useState(false);
-  const [showContextLoader, setShowContextLoader] = useState(false); // <- CSV loader toggle
+  const [showContextLoader, setShowContextLoader] = useState(false);
 
-  // derive ASC sign for HousesRing (whole-sign houses)
   const ascSign = deriveAscSignFromPlacements(placements);
 
-  // Wave details for bottom panel (Legend -> select a wave)
-  const selectedDetails = useMemo(() => {
-    return selectedWaveId
-      ? (waveDetailsById[selectedWaveId as WaveId] ?? null)
-      : null;
-  }, [selectedWaveId]);
+  // auto wave from selected placement
+  const placement = placements.find((p) => p.id === selectedId) || null;
+  const autoWaveId = placement
+    ? (waveIdForDegreeWithinSign(Math.floor(placement.degree)) ?? null)
+    : null;
 
-  // tooltips
+  // effective wave for the pane
+  const effectiveWaveId = browseWaveId ?? autoWaveId;
+
+  const selectedDetails = useMemo(() => {
+    return effectiveWaveId
+      ? (waveDetailsById[effectiveWaveId as WaveId] ?? null)
+      : null;
+  }, [effectiveWaveId]);
+
   const [tooltip, setTooltip] = useState<TooltipData | null>(null);
   function showTooltipFromEvent(
     e: React.MouseEvent<SVGElement, MouseEvent>,
@@ -254,11 +244,9 @@ export default function App() {
     setTooltip(null);
   }
 
-  // loader moved into Controls via onLoadBuiltInContext
   async function loadBuiltInContext() {
     try {
       const manifest = await fetchContextManifest();
-      console.log("[CTX] manifest", manifest);
       const raw = await fetchContextCsv(manifest.dataset);
       const loaded = rowsToContext(raw);
       setContext(loaded);
@@ -274,7 +262,7 @@ export default function App() {
     <div
       style={{
         display: "grid",
-        gridTemplateColumns: "1fr 480px",
+        gridTemplateColumns: "1fr 540px", // wider sidebar by default
         height: "100vh",
       }}
     >
@@ -289,7 +277,6 @@ export default function App() {
           minWidth: 0,
         }}
       >
-        {/* Top bar */}
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <div style={{ flex: 1 }} />
           <button
@@ -335,19 +322,16 @@ export default function App() {
           </button>
         </div>
 
-        {/* MIDDLE: Controls (left) + Wheel (right) */}
         <div
           style={{
             display: "grid",
             gridTemplateColumns: "minmax(260px, 560px) 1fr",
             gap: 16,
             alignItems: "start",
-            // this row stretches to fill all available height:
             flex: 1,
             minHeight: 0,
           }}
         >
-          {/* LEFT COLUMN: controls stack */}
           <div
             style={{
               display: "flex",
@@ -365,14 +349,14 @@ export default function App() {
               getExportCSV={() => getExportCSVRows()}
             />
           </div>
-          {/* RIGHT COLUMN: wheel gets the full remaining space */}
+
           <div
             ref={wheelRef}
             style={{
               position: "relative",
               minWidth: 0,
               minHeight: 0,
-              height: "100%", // <- give useElementSize full height to work with
+              height: "100%",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -383,12 +367,12 @@ export default function App() {
               placements={placements}
               selectedId={selectedId}
               onSelect={handleSelect}
-              filterWaveId={selectedWaveId}
+              filterWaveId={autoWaveId} // keep auto-filter behavior on wheel if you want
               useGlyphs={useGlyphs}
               rotationDeg={0}
               showHouses={showHouses}
               showDecans={showDecans}
-              ascSign={ascSign as any}
+              ascSign={deriveAscSignFromPlacements(placements) as any}
               asc={showAngles ? null : null}
               mc={showAngles ? null : null}
               onShowTooltip={showTooltipFromEvent}
@@ -397,10 +381,12 @@ export default function App() {
             <Tooltip data={tooltip} />
           </div>
         </div>
-        {/* BOTTOM: legend stays at the bottom */}
+
         <LegendBar
-          selectedWaveId={selectedWaveId}
-          onSelect={setSelectedWaveId}
+          // highlight whichever wave is active in the pane
+          selectedWaveId={effectiveWaveId}
+          // clicking a wave = browsing mode
+          onSelect={(id) => setBrowseWaveId(id)}
         />
       </div>
 
@@ -408,9 +394,12 @@ export default function App() {
       <Sidebar
         context={context}
         setContext={setContext}
-        selected={placements.find((p) => p.id === selectedId) || null}
+        selected={placement}
         waveDetails={selectedDetails}
-        showCsvLoader={showContextLoader} // <- pass toggle
+        showCsvLoader={showContextLoader}
+        // NEW: Sidebar can show a little “browsing” banner + back control
+        browsingWaveId={browseWaveId}
+        onExitBrowsing={() => setBrowseWaveId(null)}
       />
     </div>
   );

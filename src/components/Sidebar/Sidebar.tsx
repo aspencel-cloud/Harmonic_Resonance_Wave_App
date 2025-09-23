@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 
 import type { ContextMap, Placement } from "../../app/types";
 import { waveIdForDegreeWithinSign } from "../../utils/mapping";
@@ -6,12 +6,22 @@ import { getWaveName } from "../../data/waves";
 import { normPlanet, normSign } from "../../data/aliases";
 import type { WaveDetails } from "../../data/waveDetails";
 
+import { loadDecans, type DecanMetaMap } from "../../data/decans";
+import { getDecanEnriched } from "../../utils/getDecanEnriched";
+import DecanBlock from "./DecanBlock";
+
+import "./sidebar.css";
+
 type Props = {
   context: ContextMap;
   setContext: (ctx: ContextMap) => void;
   selected: Placement | null;
   waveDetails?: WaveDetails | null;
-  showCsvLoader?: boolean; // <- NEW
+  showCsvLoader?: boolean;
+
+  // wave-browsing support from App
+  browsingWaveId?: number | null;
+  onExitBrowsing?: () => void;
 };
 
 export default function Sidebar({
@@ -20,7 +30,10 @@ export default function Sidebar({
   selected,
   waveDetails,
   showCsvLoader = false,
+  browsingWaveId = null,
+  onExitBrowsing,
 }: Props) {
+  // ------- Context lookup for selected placement -------
   let ctxEntry: null | {
     Note?: string;
     Sabian?: string;
@@ -46,6 +59,33 @@ export default function Sidebar({
     }
   }
 
+  // ------- Decans (CSV meta + computed face/subsign) -------
+  const [decanMeta, setDecanMeta] = useState<DecanMetaMap | null>(null);
+  useEffect(() => {
+    let alive = true;
+    loadDecans()
+      .then((m) => {
+        if (alive) setDecanMeta(m);
+      })
+      .catch(() => {
+        if (alive) setDecanMeta(null);
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const decan =
+    selected && typeof selected.degree === "number"
+      ? getDecanEnriched(
+          normSign(selected.sign),
+          Math.floor(selected.degree),
+          decanMeta,
+          "chaldean" // default show face ruler
+        )
+      : null;
+
+  // ------- CSV loader for custom context -------
   function onLoadCsvFromFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -114,55 +154,91 @@ export default function Sidebar({
   }
 
   return (
-    <aside
-      style={{
-        borderLeft: "1px solid var(--muted)",
-        padding: 16,
-        overflow: "auto",
-      }}
-    >
+    <aside className="aside">
       <h2 style={{ marginTop: 0 }}>Details</h2>
 
       {selected ? (
         <>
-          <h3 style={{ margin: "8px 0" }}>{normPlanet(selected.planet)}</h3>
-          <div style={{ opacity: 0.85, marginBottom: 12 }}>
-            {normSign(selected.sign)} {Math.floor(selected.degree)}°{" "}
+          {/* Header: Planet (bigger) + Sign/Degree + Wave chip */}
+          <div className="headerRow">
+            <span className="chip" style={{ fontSize: 16, padding: "4px 8px" }}>
+              {normPlanet(selected.planet)}
+            </span>
+            <h3 style={{ margin: "0 0 0 6px", fontSize: 20 }}>
+              {normSign(selected.sign)} {Math.floor(selected.degree)}°
+            </h3>
             {waveId ? (
-              <>
-                • Wave {waveId}
+              <span className="chip waveChip" style={{ marginLeft: 8 }}>
+                Wave {waveId}
                 {waveName ? ` — ${waveName}` : ""}
-              </>
+              </span>
             ) : null}
           </div>
 
+          {/* Browsing banner */}
+          {browsingWaveId != null && (
+            <div
+              className="chip"
+              style={{
+                display: "inline-flex",
+                gap: 8,
+                background: "#10161d",
+                borderColor: "#2e3a46",
+                marginBottom: 8,
+              }}
+            >
+              Viewing Wave {browsingWaveId} (browsing)
+              {onExitBrowsing ? (
+                <button
+                  onClick={onExitBrowsing}
+                  style={{
+                    marginLeft: 6,
+                    border: "1px solid var(--pane-border)",
+                    background: "transparent",
+                    color: "inherit",
+                    borderRadius: 6,
+                    padding: "2px 6px",
+                    cursor: "pointer",
+                  }}
+                >
+                  Back to placement’s wave
+                </button>
+              ) : null}
+            </div>
+          )}
+
+          {/* Placement context */}
           {ctxEntry ? (
-            <div style={{ display: "grid", gap: 12 }}>
+            <div className="block">
               {ctxEntry.Note ? (
                 <>
-                  <div style={{ fontWeight: 600 }}>Note</div>
+                  <div className="label">Placement Insight</div>
                   <div style={{ whiteSpace: "pre-wrap" }}>{ctxEntry.Note}</div>
                 </>
               ) : null}
 
               {ctxEntry.Sabian ? (
                 <>
-                  <div style={{ fontWeight: 600 }}>Sabian Symbol</div>
-                  <div>{ctxEntry.Sabian}</div>
+                  <div className="label" style={{ fontSize: 16 }}>
+                    Sabian Symbol
+                  </div>
+                  <div style={{ fontSize: 15 }}>{ctxEntry.Sabian}</div>
                 </>
               ) : null}
 
               {ctxEntry.Chandra ? (
                 <>
-                  <div style={{ fontWeight: 600 }}>Chandra Symbol</div>
-                  <div>{ctxEntry.Chandra}</div>
+                  <div className="label" style={{ fontSize: 16 }}>
+                    Chandra Symbol
+                  </div>
+                  <div style={{ fontSize: 15 }}>{ctxEntry.Chandra}</div>
                 </>
               ) : null}
 
               {ctxEntry.Question ? (
                 <>
-                  <div style={{ fontWeight: 600 }}>Personal Question</div>
-                  <div>{ctxEntry.Question}</div>
+                  <div className="label">Personal Question</div>
+                  <div style={{ fontStyle: "italic" }}>{ctxEntry.Question}</div>
                 </>
               ) : null}
             </div>
@@ -176,11 +252,11 @@ export default function Sidebar({
         <div style={{ opacity: 0.7 }}>Click a placement to see details.</div>
       )}
 
-      {/* CSV loader – gated behind toggle */}
+      {/* CSV loader toggle */}
       {showCsvLoader && (
         <>
-          <hr style={{ margin: "16px 0" }} />
-          <div style={{ fontWeight: 600, marginBottom: 8 }}>
+          <hr className="hr" />
+          <div className="label" style={{ marginBottom: 8 }}>
             Load Context CSV
           </div>
           <input
@@ -188,7 +264,7 @@ export default function Sidebar({
             accept=".csv,text/csv"
             onChange={onLoadCsvFromFile}
           />
-          <div style={{ fontSize: 12, opacity: 0.7, marginTop: 8 }}>
+          <div className="smallNote" style={{ marginTop: 8 }}>
             Accepted headers (case-insensitive): Wave, Degree, Sign, Planet,
             Note, Sabian/Sabian Symbol, Chandra/Chandra Symbol, Personal
             Question/Question
@@ -196,43 +272,33 @@ export default function Sidebar({
         </>
       )}
 
-      {/* Core Wave details (selected via Legend) */}
-      <hr style={{ margin: "16px 0" }} />
+      {/* --------- DECAN BLOCK (back again!) --------- */}
+      {decan ? (
+        <>
+          <hr className="hr" />
+          <DecanBlock decan={decan} />
+        </>
+      ) : null}
+
+      <hr className="hr" />
+
+      {/* --------- WAVE DETAILS --------- */}
       {waveDetails ? (
         <div>
-          <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-            <span
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: 12,
-                background: "var(--bg-soft)",
-                border: "1px solid var(--muted)",
-                borderRadius: 6,
-                padding: "2px 6px",
-              }}
-            >
-              {waveDetails.shortId}
-            </span>
+          <div className="headerRow" style={{ marginTop: 6 }}>
+            <span className="chip waveChip">W{waveDetails.shortId}</span>
             <h3 style={{ margin: "6px 0" }}>{waveDetails.title}</h3>
           </div>
-          <p style={{ opacity: 0.9 }}>{waveDetails.summary}</p>
+          <p className="dim" style={{ opacity: 0.9 }}>
+            {waveDetails.summary}
+          </p>
 
-          <ul
-            style={{
-              display: "flex",
-              gap: 12,
-              padding: 0,
-              margin: "8px 0",
-              flexWrap: "wrap",
-            }}
-          >
-            <li style={{ listStyle: "none" }}>
+          <ul className="kvList" style={{ margin: "8px 0" }}>
+            <li>
               <strong>Anchors:</strong> {waveDetails.anchors.join(", ")}
             </li>
             {waveDetails.keywords?.length ? (
-              <li style={{ listStyle: "none" }}>
+              <li>
                 <strong>Keywords:</strong> {waveDetails.keywords.join(" · ")}
               </li>
             ) : null}
@@ -240,17 +306,26 @@ export default function Sidebar({
 
           {waveDetails.sections.map((s) => (
             <section key={s.id} style={{ padding: "6px 0" }}>
-              <h4 style={{ margin: "4px 0" }}>{s.title}</h4>
-              {s.paragraphs.map((p, i) => (
-                <p key={i} style={{ margin: "4px 0" }}>
-                  {p}
-                </p>
-              ))}
+              <details
+                className="details"
+                {...(s.title.toLowerCase().includes("theme")
+                  ? { open: true }
+                  : {})}
+              >
+                <summary>{s.title}</summary>
+                <div className="content">
+                  {s.paragraphs.map((p, i) => (
+                    <p key={i} style={{ margin: "4px 0" }}>
+                      {p}
+                    </p>
+                  ))}
+                </div>
+              </details>
             </section>
           ))}
         </div>
       ) : (
-        <div style={{ opacity: 0.7 }}>
+        <div className="dim">
           Select a Wave (via the legend) to see its details here.
         </div>
       )}
