@@ -1,0 +1,17 @@
+// =============================
+// src/styles/tokens.css (design tokens; import once in main.tsx)
+// =============================
+:root {
+  --rs-bg: #0d0f12;
+  --rs-surface: #151922;
+  --rs-text: #e6e6ea;
+  --rs-muted: #9aa3b2;
+  --rs-border: #242a36;
+}
+.light {
+  --rs-bg: #ffffff;
+  --rs-surface: #f4f6f9;
+  --rs-text: #111318;
+  --rs-muted: #535b66;
+  --rs-border: #dde2ea;
+}
