@@ -1,59 +1,75 @@
 import React from "react";
+import type { WaveKey } from "../../utils/waveColorStyle";
+import {
+  barBackground,
+  chipBackground,
+  styleFromWaveColor,
+  textColorForChip,
+} from "../../utils/waveColorStyle";
 
-import { WAVE_DEGREE_ANCHORS, WAVE_NAMES } from "../../data/waves";
-import { getWaveColor } from "../../data/waveColors";
+type Props = {
+  selectedWaveId?: number | null;
+  onSelect: (id: number) => void;
+};
 
-export default function LegendBar({
-  selectedWaveId,
-  onSelect,
-}: {
-  selectedWaveId: number | null;
-  onSelect: (id: number | null) => void;
-}) {
-  const waves = Array.from({ length: 10 }, (_, i) => i + 1);
+const KEYS: WaveKey[] = [
+  "W1",
+  "W2",
+  "W3",
+  "W4",
+  "W5",
+  "W6",
+  "W7",
+  "W8",
+  "W9",
+  "W10",
+];
 
+export default function LegendBar({ selectedWaveId, onSelect }: Props) {
   return (
     <div
       style={{
-        display: "flex",
-        gap: 8,
-        flexWrap: "wrap",
-        justifyContent: "center",
-        marginTop: 8,
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))",
+        gap: 10,
+        padding: 10,
+        borderTop: "1px solid var(--hww-card-border, rgba(255,255,255,0.12))",
+        background: "var(--hww-card, rgba(255,255,255,0.04))",
       }}
     >
-      {waves.map((id) => {
-        const color = getWaveColor(id);
-        const name = WAVE_NAMES[id];
-        const anchors = WAVE_DEGREE_ANCHORS[id].map((d) => `${d}°`).join(", ");
+      {KEYS.map((key, idx) => {
+        const id = idx + 1;
         const active = selectedWaveId === id;
+        const swatch = styleFromWaveColor(key);
         return (
           <button
-            key={id}
-            onClick={() => onSelect(active ? null : id)}
-            title={`Wave ${id} — ${name} (${anchors})`}
+            key={key}
+            onClick={() => onSelect(id)}
+            title={`Wave ${id}`}
             style={{
-              borderRadius: 999,
-              padding: "4px 10px",
-              border: `1px solid ${color}`,
-              background: active ? color : "transparent",
-              color: active ? "#000" : "var(--text)",
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 6,
+              textAlign: "left",
+              padding: "10px 12px",
+              borderRadius: 12,
+              border: `1px solid ${swatch.borderColor}`,
+              background: chipBackground(key),
+              color: textColorForChip(key), // <-- readable text for W8/W10
+              cursor: "pointer",
+              outline: active ? "2px solid var(--hww-text, #eaeaea)" : "none",
+              boxShadow: active
+                ? "0 0 0 3px rgba(255,255,255,0.15) inset"
+                : "none",
+              fontSize: 13,
             }}
           >
-            <span
+            <div style={{ opacity: 0.85, fontWeight: 600 }}>{`Wave ${id}`}</div>
+            <div
               style={{
-                display: "inline-block",
-                width: 10,
-                height: 10,
+                marginTop: 6,
+                height: 4,
                 borderRadius: 999,
-                background: color,
-                outline: active ? "2px solid #000" : "none",
+                background: barBackground(key),
               }}
             />
-            Wave {id}
           </button>
         );
       })}

@@ -1,29 +1,36 @@
 // src/utils/getDecanEnriched.ts
-import { getDecanInfo, type DecanSystem } from "../utils/decan";
-import type { DecanMetaMap } from "../data/decans";
+import { getDecanInfo, DecanSystem } from "./decan";
+import type { DecanMeta, DecanMetaMap } from "@/data/decans";
 
-/** Return compute-info + prose. Falls back gracefully if CSV isn’t loaded. */
+/** Compute decan (index/start/end/labels) + merge CSV meta if present */
 export function getDecanEnriched(
   sign: string,
   degreeInSign: number,
   metaMap: DecanMetaMap | null,
-  system: DecanSystem = "chaldean" // UI default: show face ruler in header
+  system: DecanSystem = "chaldean"
 ) {
-  // base: index/start/end/label/secondary from your decan util
   const base = getDecanInfo(sign, degreeInSign, system);
   const key = `${sign}:${base.index}`;
-  const meta = metaMap?.get(key) ?? null;
+  const meta: DecanMeta | undefined = metaMap?.get(key) ?? undefined;
 
-  // Prefer CSV prose; fallback to computed label/secondary
   return {
     ...base,
-    ...(meta ?? {}),
+    // simple fields (prefer CSV when present)
     Label: meta?.Label ?? base.label,
     Ruler: meta?.Ruler ?? (system === "chaldean" ? base.secondary : ""),
     Subsign:
       meta?.Subsign ??
-      (system === "modern_elemental"
-        ? (base.secondary ?? "")
-        : (meta?.Subsign ?? "")),
+      (system === "modern_elemental" ? (base.secondary ?? "") : ""),
+
+    Degree_Start: meta?.Degree_Start ?? base.startDeg,
+    Degree_End: meta?.Degree_End ?? base.endDeg,
+
+    // rich prose
+    Structural_Function: meta?.Structural_Function,
+    Phase_Tone: meta?.Phase_Tone,
+    One_Liner: meta?.One_Liner,
+    Field_Function: meta?.Field_Function,
+    Wave_Summary: meta?.Wave_Summary,
+    Poetic_Short: meta?.Poetic_Short,
   };
 }

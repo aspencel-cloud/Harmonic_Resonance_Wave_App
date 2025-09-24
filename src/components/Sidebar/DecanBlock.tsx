@@ -1,100 +1,103 @@
 // src/components/Sidebar/DecanBlock.tsx
 import React from "react";
-import "./sidebar.css";
+import "./sidebar.css"; // <-- plain stylesheet (no ?inline, no modules)
 
-type DecanEnriched = {
-  index: 1 | 2 | 3;
-  startDeg: 0 | 10 | 20;
-  endDeg: 9 | 19 | 29;
-  Label?: string;
-  Ruler?: string; // e.g., "Mars"
-  Subsign?: string; // e.g., "Leo"
-  Structural_Function?: string;
-  Phase_Tone?: string;
-  Field_Function?: string;
-  Wave_Summary?: string;
-  Poetic_Short?: string;
+type Props = {
+  decan: {
+    index: 1 | 2 | 3;
+    startDeg: number;
+    endDeg: number;
+    Label?: string;
+    Ruler?: string; // Chaldean face ruler if present
+    Subsign?: string; // Modern sub-sign if present
+    Structural_Function?: string;
+    Phase_Tone?: string;
+    One_Liner?: string;
+    Field_Function?: string;
+    Wave_Summary?: string;
+    Poetic_Short?: string;
+  } | null;
 };
 
-export default function DecanBlock({ decan }: { decan: DecanEnriched | null }) {
+export default function DecanBlock({ decan }: Props) {
   if (!decan) return null;
 
-  const header = decan.Label ?? `Decan ${decan.index}`;
-  const ruler = decan.Ruler ? ` — ${decan.Ruler}` : "";
-  const range = `${decan.startDeg}–${decan.endDeg}°`;
+  const {
+    index,
+    startDeg,
+    endDeg,
+    Label,
+    Ruler,
+    Subsign,
+    Structural_Function,
+    Phase_Tone,
+    One_Liner,
+    Field_Function,
+    Wave_Summary,
+    Poetic_Short,
+  } = decan;
 
   return (
-    <section>
-      <div className="headerRow">
-        <span className="chip decanChip">Decan</span>
-        <h3 className="sectionTitle" style={{ marginLeft: 4 }}>
-          {header}
-          {ruler}
-        </h3>
-      </div>
+    <section className="block">
+      <span className="chip decanChip">Decan</span>
+      <h3 style={{ margin: "2px 0 0" }}>
+        {Label || `Decan ${index}`}
+        {Ruler ? ` — ${Ruler}` : Subsign ? ` — ${Subsign}` : ""}
+      </h3>
 
-      <ul className="kvList" style={{ marginBottom: 8 }}>
+      <ul className="kvList">
         <li>
-          <strong>Degrees:</strong> {range}
+          <strong>Degrees:</strong> {startDeg}–{endDeg}°
         </li>
-        {decan.Subsign ? (
+        {Ruler ? (
           <li>
-            <strong>Sub-sign:</strong> {decan.Subsign}
+            <strong>Face:</strong> {Ruler}
           </li>
         ) : null}
-        {decan.Ruler ? (
+        {Subsign ? (
           <li>
-            <strong>Face:</strong> {decan.Ruler}
+            <strong>Sub-sign:</strong> {Subsign}
           </li>
         ) : null}
       </ul>
 
-      {/* Collapsible: Structural Function & Tone */}
-      {(decan.Structural_Function || decan.Phase_Tone) && (
+      {One_Liner ? (
         <details className="details" open>
-          <summary>Structural Function & Tone</summary>
+          <summary>Essence (one-liner)</summary>
+          <div className="content">{One_Liner}</div>
+        </details>
+      ) : null}
+
+      {Structural_Function ? (
+        <details className="details" open>
+          <summary>Structural Function &amp; Tone</summary>
           <div className="content">
-            {decan.Structural_Function ? (
-              <p>
-                <strong>Function:</strong> {decan.Structural_Function}
-              </p>
-            ) : null}
-            {decan.Phase_Tone ? (
-              <p>
-                <strong>Phase Tone:</strong> {decan.Phase_Tone}
-              </p>
-            ) : null}
+            {Structural_Function}
+            {Phase_Tone ? `\n\nTone: ${Phase_Tone}` : ""}
           </div>
         </details>
-      )}
+      ) : null}
 
-      {/* Collapsible: Field Function */}
-      {decan.Field_Function && (
+      {Field_Function ? (
         <details className="details">
           <summary>Field Function</summary>
-          <div className="content">{decan.Field_Function}</div>
+          <div className="content">{Field_Function}</div>
         </details>
-      )}
+      ) : null}
 
-      {/* Collapsible: Wave Summary */}
-      {decan.Wave_Summary && (
+      {Wave_Summary ? (
         <details className="details">
           <summary>Wave Summary</summary>
-          <div className="content">{decan.Wave_Summary}</div>
+          <div className="content">{Wave_Summary}</div>
         </details>
-      )}
+      ) : null}
 
-      {/* Collapsible: Poetic Snapshot */}
-      {decan.Poetic_Short && (
+      {Poetic_Short ? (
         <details className="details">
-          <summary>Poetic Snapshot</summary>
-          <div className="content">{decan.Poetic_Short}</div>
+          <summary>Poetic</summary>
+          <div className="content">{Poetic_Short}</div>
         </details>
-      )}
-
-      <div className="smallNote">
-        Select a Wave (via the legend) to see its details here.
-      </div>
+      ) : null}
     </section>
   );
 }
