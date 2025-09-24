@@ -1,13 +1,27 @@
-import React, { useEffect, useRef, useState, useMemo } from "react";
+import React, {
+  useEffect,
+  useRef,
+  useState,
+  useMemo,
+  useCallback,
+} from "react";
 
 import { initialState } from "./app/state";
 import { ContextMap, Placement } from "./app/types";
+
 import Wheel from "./components/Wheel/Wheel";
 import Sidebar from "./components/Sidebar/Sidebar";
-import Controls from "./components/Controls/Controls";
-import RawImport from "./components/Controls/RawImport"; // kept for chart mode via Controls props (optional)
 import LegendBar from "./components/Controls/LegendBar";
 import Tooltip, { TooltipData } from "./components/common/Tooltip";
+
+import HeaderBar from "./components/Header/HeaderBar";
+import TopControlsBar from "./components/Controls/TopControlsBar";
+
+import { LegalNotice } from "./components/Legal/LegalNotice";
+import { TermsOfUseModal } from "./components/Legal/TermsOfUseModal";
+
+import ResonanceSoundPrototype from "./features/sound/ResonanceSoundPrototype";
+
 import { waveIdForDegreeWithinSign } from "./utils/mapping";
 import { useElementSize } from "./hooks/useElementSize";
 
@@ -19,11 +33,11 @@ import {
 
 import { waveDetailsById, type WaveId } from "./data/waveDetails";
 
+// ----- constants / helpers
 type Mode = "manual" | "chart";
 const LS_MANUAL = "hww.placements.manual";
 const LS_CHART = "hww.placements.chart";
 const LS_THEME = "hww.theme";
-
 const ASC_ALIASES = new Set(["ASC", "Asc", "Ascendant", "Asc."]);
 function deriveAscSignFromPlacements(
   items: { planet: string; sign: string }[]
@@ -33,16 +47,22 @@ function deriveAscSignFromPlacements(
 }
 
 export default function App() {
+  // Route guard
+  if (
+    typeof window !== "undefined" &&
+    window.location.pathname === "/sound-demo"
+  ) {
+    return <ResonanceSoundPrototype />;
+  }
+
+  // ---------- state ----------
   const [context, setContext] = useState<ContextMap>(initialState.context);
   const [mode, setMode] = useState<Mode>("manual");
   const [manualPlacements, setManualPlacements] = useState<Placement[]>([]);
   const [chartPlacements, setChartPlacements] = useState<Placement[]>([]);
   const [selectedId, setSelectedId] = useState<string | undefined>();
-
-  // NEW: user “browsing” wave from legend
   const [browseWaveId, setBrowseWaveId] = useState<number | null>(null);
 
-  // theme
   const [theme, setTheme] = useState<"light" | "dark">(
     (localStorage.getItem(LS_THEME) as "light" | "dark") ||
       (matchMedia && matchMedia("(prefers-color-scheme: dark)").matches
@@ -54,7 +74,7 @@ export default function App() {
     document.documentElement.setAttribute("data-theme", theme);
   }, [theme]);
 
-  // restore/persist placements
+  // restore placements
   useEffect(() => {
     try {
       const rawM = localStorage.getItem(LS_MANUAL);
@@ -76,16 +96,14 @@ export default function App() {
     } catch {}
   }, [chartPlacements]);
 
-  // Autoload built-in CONTEXT once if empty
+  // autoload context
   useEffect(() => {
     const skipLS = localStorage.getItem("hww.skipBuiltinContext") === "1";
     const sp = new URLSearchParams(window.location.search);
     const skipURL = sp.get("ctx") === "0";
-
     const isEmpty =
       !context ||
       Object.keys(context).filter((k) => k.startsWith("Wave")).length === 0;
-
     if (isEmpty && !skipLS && !skipURL) {
       (async () => {
         try {
@@ -103,13 +121,14 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // placements by mode
   const placements = mode === "manual" ? manualPlacements : chartPlacements;
   const setPlacements = (updater: (prev: Placement[]) => Placement[]) => {
     if (mode === "manual") setManualPlacements(updater);
     else setChartPlacements(updater);
   };
 
-  // add / import / delete / clear
+  // CRUD
   function addPlacement(p: Placement) {
     const deg = Math.floor(p.degree);
     const key = `${p.planet}|${p.sign}|${deg}`;
@@ -119,7 +138,7 @@ export default function App() {
         : [...prev, { ...p, degree: deg }]
     );
     setSelectedId(p.id);
-    setBrowseWaveId(null); // tie sidebar back to placement wave
+    setBrowseWaveId(null);
   }
   function clearPlacements() {
     setPlacements(() => []);
@@ -128,7 +147,7 @@ export default function App() {
   }
   function deleteSelected() {
     if (!selectedId) return;
-    setPlacements((prev) => prev.filter((p) => p.id !== selectedId));
+    setPlacements((p) => p.filter((x) => x.id !== selectedId));
     setSelectedId(undefined);
     setBrowseWaveId(null);
   }
@@ -147,9 +166,7 @@ export default function App() {
           return {
             ...it,
             degree: deg,
-            id: `${it.planet}-${it.sign}-${deg}-${Math.random()
-              .toString(36)
-              .slice(2, 7)}`,
+            id: `${it.planet}-${it.sign}-${deg}-${Math.random().toString(36).slice(2, 7)}`,
           } as Placement;
         })
         .filter(Boolean) as Placement[];
@@ -159,6 +176,7 @@ export default function App() {
     setBrowseWaveId(null);
   }
 
+  // exports
   function getExportCSVRows() {
     return placements.map((p) => {
       const deg = Math.floor(p.degree);
@@ -184,7 +202,7 @@ export default function App() {
     return { context, mode, manualPlacements, chartPlacements };
   }
 
-  // selection -> auto wave filter + browsing reset
+  // selection
   function handleSelect(nextId?: string) {
     if (nextId && nextId === selectedId) {
       setSelectedId(undefined);
@@ -192,9 +210,8 @@ export default function App() {
       return;
     }
     setSelectedId(nextId);
-    setBrowseWaveId(null); // selecting a placement re-ties the sidebar
+    setBrowseWaveId(null);
   }
-
   function switchMode(next: Mode) {
     if (next !== mode) {
       setMode(next);
@@ -203,33 +220,42 @@ export default function App() {
     }
   }
 
+  // wheel sizing
   const wheelRef = useRef<HTMLDivElement | null>(null);
-  const { width, height } = useElementSize(wheelRef.current);
-  const wheelSize = Math.max(240, Math.floor(Math.min(width, height) - 16));
+  const HEADER_H = 64,
+    FOOTER_H = 36,
+    VERTICAL_PAD = 32;
+  const viewportH = typeof window !== "undefined" ? window.innerHeight : 900;
+  const availableHeight = Math.max(
+    620,
+    viewportH - (HEADER_H + FOOTER_H + VERTICAL_PAD * 2)
+  );
+  const { width: wheelW, height: wheelH } = useElementSize(wheelRef.current);
+  const wheelSize = Math.max(300, Math.floor(Math.min(wheelW, wheelH)));
 
-  const [useGlyphs, setUseGlyphs] = useState(true);
-  const [showHouses, setShowHouses] = useState(true);
-  const [showAngles, setShowAngles] = useState(true);
-  const [showDecans, setShowDecans] = useState(false);
+  // features ON by default (no public toggles)
+  const useGlyphs = true;
+  const showHouses = true;
+  const showAngles = true;
+  const showDecans = true;
+
   const [showContextLoader, setShowContextLoader] = useState(false);
 
-  const ascSign = deriveAscSignFromPlacements(placements);
-
-  // auto wave from selected placement
+  // Effective wave details
   const placement = placements.find((p) => p.id === selectedId) || null;
   const autoWaveId = placement
     ? (waveIdForDegreeWithinSign(Math.floor(placement.degree)) ?? null)
     : null;
-
-  // effective wave for the pane
   const effectiveWaveId = browseWaveId ?? autoWaveId;
+  const selectedDetails = useMemo(
+    () =>
+      effectiveWaveId
+        ? (waveDetailsById[effectiveWaveId as WaveId] ?? null)
+        : null,
+    [effectiveWaveId]
+  );
 
-  const selectedDetails = useMemo(() => {
-    return effectiveWaveId
-      ? (waveDetailsById[effectiveWaveId as WaveId] ?? null)
-      : null;
-  }, [effectiveWaveId]);
-
+  // tooltips
   const [tooltip, setTooltip] = useState<TooltipData | null>(null);
   function showTooltipFromEvent(
     e: React.MouseEvent<SVGElement, MouseEvent>,
@@ -258,149 +284,176 @@ export default function App() {
     }
   }
 
+  const [termsOpen, setTermsOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const openSoundDemo = useCallback(
+    () => window.open("/sound-demo", "_blank"),
+    []
+  );
+  const toggleTheme = useCallback(
+    () => setTheme((t) => (t === "light" ? "dark" : "light")),
+    []
+  );
+
   return (
     <div
       style={{
-        display: "grid",
-        gridTemplateColumns: "1fr 540px", // wider sidebar by default
-        height: "100vh",
+        minHeight: "100vh",
+        background: "var(--rs-bg)",
+        display: "flex",
+        flexDirection: "column",
       }}
+      className={theme === "light" ? "light" : ""}
     >
-      {/* LEFT */}
+      {/* Header with all app-level actions */}
+      <HeaderBar
+        appName={"Soul Resonance Wave Wheel"}
+        theme={theme}
+        onToggleTheme={toggleTheme}
+        onOpenSoundDemo={openSoundDemo}
+        onToggleDetails={() => setSidebarOpen((o) => !o)}
+        onCenterWheel={() => {
+          if (wheelRef.current) {
+            wheelRef.current.scrollIntoView({ block: "center" });
+          }
+        }}
+      />
+
+      {/* Top Controls Bar (lean: Mode + Export/Data) */}
+      <div style={{ width: "100%", background: "transparent" }}>
+        <div style={{ maxWidth: 1760, margin: "0 auto", padding: "0 16px" }}>
+          <TopControlsBar
+            mode={mode}
+            onSwitchMode={switchMode}
+            showContextLoader={showContextLoader}
+            setShowContextLoader={setShowContextLoader}
+            loadBuiltInContext={loadBuiltInContext}
+            getExportJSON={getExportJSON}
+            getExportCSV={getExportCSVRows}
+            addPlacement={addPlacement}
+            clearPlacements={clearPlacements}
+            addManyRaw={mode === "chart" ? addManyRaw : undefined}
+          />
+        </div>
+      </div>
+
+      {/* Main grid: Wheel | Details */}
       <div
         style={{
-          padding: 16,
-          display: "flex",
-          flexDirection: "column",
-          gap: 8,
-          overflow: "hidden",
+          width: "100%",
+          maxWidth: 1760,
+          margin: "0 auto",
+          padding: "8px 16px 16px",
+          display: "grid",
+          gridTemplateColumns: `1fr ${sidebarOpen ? "minmax(560px, 800px)" : "0px"}`,
+          gap: "16px",
+          flex: 1,
+          boxSizing: "border-box",
           minWidth: 0,
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <div style={{ flex: 1 }} />
-          <button
-            onClick={() => switchMode("manual")}
-            style={{ fontWeight: mode === "manual" ? 700 : 400 }}
-          >
-            Manual
-          </button>
-          <button
-            onClick={() => switchMode("chart")}
-            style={{ fontWeight: mode === "chart" ? 700 : 400 }}
-          >
-            Chart
-          </button>
-          <button
-            onClick={() => setUseGlyphs((v) => !v)}
-            title="Toggle planet glyphs"
-          >
-            {useGlyphs ? "Glyphs" : "Dots"}
-          </button>
-          <button
-            onClick={() => setTheme((t) => (t === "light" ? "dark" : "light"))}
-          >
-            {theme === "dark" ? "Light" : "Dark"}
-          </button>
-          <button onClick={() => setShowHouses((v) => !v)}>
-            {showHouses ? "Houses" : "No Houses"}
-          </button>
-          <button onClick={() => setShowAngles((v) => !v)}>
-            {showAngles ? "Angles" : "No Angles"}
-          </button>
-          <button
-            onClick={() => setShowDecans((v) => !v)}
-            title="Toggle Decans"
-          >
-            {showDecans ? "Decans" : "No Decans"}
-          </button>
-          <button
-            onClick={() => setShowContextLoader((v) => !v)}
-            title="Toggle CSV Loader"
-          >
-            {showContextLoader ? "Hide CSV Loader" : "CSV Loader"}
-          </button>
-        </div>
-
+        {/* Center: Wheel */}
         <div
+          ref={wheelRef}
           style={{
-            display: "grid",
-            gridTemplateColumns: "minmax(260px, 560px) 1fr",
-            gap: 16,
-            alignItems: "start",
-            flex: 1,
-            minHeight: 0,
+            position: "relative",
+            height: availableHeight,
+            minHeight: 620,
+            width: "100%",
+            minWidth: 0,
+            border: "1px solid var(--rs-border)",
+            borderRadius: 16,
+            background: "var(--rs-surface)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            overflow: "hidden",
           }}
         >
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: 8,
-              minWidth: 0,
-            }}
-          >
-            <Controls
-              onAdd={addPlacement}
-              onClear={clearPlacements}
-              onImport={mode === "chart" ? addManyRaw : undefined}
-              onLoadBuiltInContext={loadBuiltInContext}
-              getExportJSON={() => getExportJSON()}
-              getExportCSV={() => getExportCSVRows()}
-            />
-          </div>
-
-          <div
-            ref={wheelRef}
-            style={{
-              position: "relative",
-              minWidth: 0,
-              minHeight: 0,
-              height: "100%",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <Wheel
-              size={wheelSize}
-              placements={placements}
-              selectedId={selectedId}
-              onSelect={handleSelect}
-              filterWaveId={autoWaveId} // keep auto-filter behavior on wheel if you want
-              useGlyphs={useGlyphs}
-              rotationDeg={0}
-              showHouses={showHouses}
-              showDecans={showDecans}
-              ascSign={deriveAscSignFromPlacements(placements) as any}
-              asc={showAngles ? null : null}
-              mc={showAngles ? null : null}
-              onShowTooltip={showTooltipFromEvent}
-              onHideTooltip={hideTooltip}
-            />
-            <Tooltip data={tooltip} />
-          </div>
+          <Wheel
+            size={wheelSize}
+            placements={placements}
+            selectedId={selectedId}
+            onSelect={handleSelect}
+            filterWaveId={
+              browseWaveId === null && placement
+                ? (waveIdForDegreeWithinSign(Math.floor(placement.degree)) ??
+                  null)
+                : null
+            }
+            useGlyphs={useGlyphs}
+            rotationDeg={0}
+            showHouses={showHouses}
+            showDecans={showDecans}
+            ascSign={deriveAscSignFromPlacements(placements) as any}
+            asc={showAngles ? null : null}
+            mc={showAngles ? null : null}
+            onShowTooltip={showTooltipFromEvent}
+            onHideTooltip={hideTooltip}
+          />
+          <Tooltip data={tooltip} />
         </div>
 
-        <LegendBar
-          // highlight whichever wave is active in the pane
-          selectedWaveId={effectiveWaveId}
-          // clicking a wave = browsing mode
-          onSelect={(id) => setBrowseWaveId(id)}
-        />
+        {/* Right: Details */}
+        {sidebarOpen ? (
+          <aside
+            style={{
+              height: availableHeight,
+              minHeight: 620,
+              border: "1px solid var(--rs-border)",
+              borderRadius: 16,
+              background: "var(--rs-surface)",
+              overflowY: "auto",
+              overflowX: "hidden",
+              padding: 0,
+              width: "100%",
+              minWidth: 0,
+              boxSizing: "border-box",
+            }}
+          >
+            <div style={{ paddingRight: 12 }}>
+              <Sidebar
+                context={context}
+                setContext={setContext}
+                selected={placement}
+                waveDetails={selectedDetails}
+                showCsvLoader={showContextLoader}
+                browsingWaveId={browseWaveId}
+                onExitBrowsing={() => setBrowseWaveId(null)}
+              />
+            </div>
+          </aside>
+        ) : null}
       </div>
 
-      {/* RIGHT */}
-      <Sidebar
-        context={context}
-        setContext={setContext}
-        selected={placement}
-        waveDetails={selectedDetails}
-        showCsvLoader={showContextLoader}
-        // NEW: Sidebar can show a little “browsing” banner + back control
-        browsingWaveId={browseWaveId}
-        onExitBrowsing={() => setBrowseWaveId(null)}
-      />
+      {/* Legend bottom */}
+      <div
+        style={{
+          borderTop: "1px solid var(--rs-border)",
+          background: "var(--rs-surface)",
+          padding: 8,
+        }}
+      >
+        <div style={{ maxWidth: 1760, margin: "0 auto" }}>
+          <LegendBar
+            selectedWaveId={
+              browseWaveId ??
+              (placement
+                ? (waveIdForDegreeWithinSign(Math.floor(placement.degree)) ??
+                  null)
+                : null)
+            }
+            onSelect={(id) => {
+              setSelectedId(undefined);
+              setBrowseWaveId(id);
+            }}
+          />
+        </div>
+      </div>
+
+      {/* Legal + Terms */}
+      <LegalNotice onOpenTerms={() => setTermsOpen(true)} />
+      <TermsOfUseModal open={termsOpen} onClose={() => setTermsOpen(false)} />
     </div>
   );
 }

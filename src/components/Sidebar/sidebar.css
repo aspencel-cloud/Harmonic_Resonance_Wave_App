@@ -10,10 +10,10 @@
   --wave-accent: #74a2ff;
   --decan-accent: #f2b600;
 }
-
+/* src/components/Sidebar/sidebar.css */
 .aside {
-  /* a bit wider by default; App.tsx sets 540px column too */
-  width: clamp(420px, 30vw, 560px);
+  /* wider, but still responsive */
+  width: clamp(420px, 34vw, 640px);
   border-left: 1px solid var(--pane-border);
   background: var(--pane-bg);
   padding: 16px 18px;
