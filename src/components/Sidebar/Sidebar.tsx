@@ -6,11 +6,51 @@ import { getWaveName } from "../../data/waves";
 import { normPlanet, normSign } from "../../data/aliases";
 import type { WaveDetails } from "../../data/waveDetails";
 
-import { loadDecans, type DecanMetaMap } from "../../data/decans";
-import { getDecanEnriched } from "../../utils/getDecanEnriched";
-import DecanBlock from "./DecanBlock";
+import {
+  loadDecans,
+  getDecan,
+  parseWaves,
+  trimInsight,
+  type DecanRecord,
+} from "../../data/decansLoader";
+// NOTE: We are no longer importing DecanMetaMap/getDecanEnriched/DecanBlock from the old system.
 
 import "./sidebar.css";
+
+// Small local Section helper for collapsible cards
+function Section(props: {
+  title: string;
+  defaultOpen?: boolean;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(!!props.defaultOpen);
+  return (
+    <div
+      className="rs-card"
+      style={{ padding: 12, borderRadius: 12, marginTop: 12 }}
+    >
+      <button
+        onClick={() => setOpen(!open)}
+        className="sectionHeader"
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          width: "100%",
+          fontWeight: 600,
+          padding: "6px 2px",
+          cursor: "pointer",
+          background: "transparent",
+          border: "none",
+          color: "inherit",
+        }}
+      >
+        <span>{props.title}</span>
+        <span>{open ? "▾" : "▸"}</span>
+      </button>
+      {open && <div style={{ marginTop: 8 }}>{props.children}</div>}
+    </div>
+  );
+}
 
 type Props = {
   context: ContextMap;
@@ -59,33 +99,30 @@ export default function Sidebar({
     }
   }
 
-  // ------- Decans (CSV meta + computed face/subsign) -------
-  const [decanMeta, setDecanMeta] = useState<DecanMetaMap | null>(null);
+  // ------- Load Decans from CSV (new canonical file) -------
+  const [decans, setDecans] = useState<DecanRecord[] | null>(null);
+  const [decansErr, setDecansErr] = useState<string | null>(null);
+
   useEffect(() => {
     let alive = true;
     loadDecans()
-      .then((m) => {
-        if (alive) setDecanMeta(m);
+      .then((rows) => {
+        if (alive) setDecans(rows);
       })
-      .catch(() => {
-        if (alive) setDecanMeta(null);
+      .catch((e) => {
+        if (alive) setDecansErr(String(e?.message || e));
       });
     return () => {
       alive = false;
     };
   }, []);
 
-  const decan =
-    selected && typeof selected.degree === "number"
-      ? getDecanEnriched(
-          normSign(selected.sign),
-          Math.floor(selected.degree),
-          decanMeta,
-          "chaldean" // default show face ruler
-        )
+  const selectedDecan =
+    selected && typeof selected.degree === "number" && decans
+      ? getDecan(decans, normSign(selected.sign), Math.floor(selected.degree))
       : null;
 
-  // ------- CSV loader for custom context -------
+  // ------- CSV loader for custom context (unchanged) -------
   function onLoadCsvFromFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -157,25 +194,33 @@ export default function Sidebar({
     <aside className="aside">
       <h2 style={{ marginTop: 0 }}>Details</h2>
 
-      {selected ? (
+      {!selected ? (
+        <div style={{ opacity: 0.7 }}>Click a placement to see details.</div>
+      ) : (
         <>
-          {/* Header: Planet (bigger) + Sign/Degree + Wave chip */}
-          <div className="headerRow">
-            <span className="chip" style={{ fontSize: 16, padding: "4px 8px" }}>
-              {normPlanet(selected.planet)}
-            </span>
-            <h3 style={{ margin: "0 0 0 6px", fontSize: 20 }}>
-              {normSign(selected.sign)} {Math.floor(selected.degree)}°
-            </h3>
-            {waveId ? (
-              <span className="chip waveChip" style={{ marginLeft: 8 }}>
-                Wave {waveId}
-                {waveName ? ` — ${waveName}` : ""}
+          {/* ===================== STAGE 1: ANCHOR ===================== */}
+          <Section title="Anchor" defaultOpen>
+            {/* Header: Planet (bigger) + Sign/Degree + Wave chip */}
+            <div className="headerRow" style={{ marginTop: 4 }}>
+              <span
+                className="chip"
+                style={{ fontSize: 16, padding: "4px 8px" }}
+              >
+                {normPlanet(selected.planet)}
               </span>
-            ) : null}
-          </div>
+              <h3 style={{ margin: "0 0 0 6px", fontSize: 20 }}>
+                {normSign(selected.sign)} {Math.floor(selected.degree)}°
+              </h3>
+              {waveId ? (
+                <span className="chip waveChip" style={{ marginLeft: 8 }}>
+                  Wave {waveId}
+                  {waveName ? ` — ${waveName}` : ""}
+                </span>
+              ) : null}
+            </div>
+          </Section>
 
-          {/* Browsing banner */}
+          {/* Browsing banner (kept) */}
           {browsingWaveId != null && (
             <div
               className="chip"
@@ -184,7 +229,7 @@ export default function Sidebar({
                 gap: 8,
                 background: "#10161d",
                 borderColor: "#2e3a46",
-                marginBottom: 8,
+                marginTop: 8,
               }}
             >
               Viewing Wave {browsingWaveId} (browsing)
@@ -207,52 +252,148 @@ export default function Sidebar({
             </div>
           )}
 
-          {/* Placement context */}
-          {ctxEntry ? (
-            <div className="block">
-              {ctxEntry.Note ? (
-                <>
-                  <div className="label">Placement Insight</div>
-                  <div style={{ whiteSpace: "pre-wrap" }}>{ctxEntry.Note}</div>
-                </>
-              ) : null}
+          {/* ===================== STAGE 2: WAVE ===================== */}
+          <Section title="Wave" defaultOpen>
+            {waveId ? (
+              <>
+                <div style={{ fontWeight: 600 }}>
+                  Wave {waveId}
+                  {waveName ? ` — ${waveName}` : ""}
+                </div>
+                {/* If you have anchors/one-liners available in your wave data, you can add them here */}
+                <div style={{ marginTop: 8 }}>
+                  <a
+                    href={`/library/waves/${waveId}`}
+                    style={{ textDecoration: "underline" }}
+                  >
+                    Open Wave Library →
+                  </a>
+                </div>
+              </>
+            ) : (
+              <div className="dim">No wave mapping found for this degree.</div>
+            )}
+          </Section>
 
-              {ctxEntry.Sabian ? (
-                <>
-                  <div className="label" style={{ fontSize: 16 }}>
-                    Sabian Symbol
-                  </div>
-                  <div style={{ fontSize: 15 }}>{ctxEntry.Sabian}</div>
-                </>
-              ) : null}
+          {/* ===================== STAGE 3: DECAN ===================== */}
+          <Section title="Decan">
+            {decansErr ? (
+              <div style={{ color: "#f66" }}>
+                Error loading decans: {decansErr}
+              </div>
+            ) : !decans ? (
+              <div>Loading…</div>
+            ) : !selectedDecan ? (
+              <div>
+                Decan unavailable for {normSign(selected.sign)}{" "}
+                {Math.floor(selected.degree)}°
+              </div>
+            ) : (
+              <>
+                <div style={{ fontWeight: 600 }}>{selectedDecan.title}</div>
+                <div style={{ opacity: 0.8, fontSize: 13, marginTop: 2 }}>
+                  {selectedDecan.sub_sign} • Ruler: {selectedDecan.ruler}
+                </div>
 
-              {ctxEntry.Chandra ? (
-                <>
-                  <div className="label" style={{ fontSize: 16 }}>
-                    Chandra Symbol
-                  </div>
-                  <div style={{ fontSize: 15 }}>{ctxEntry.Chandra}</div>
-                </>
-              ) : null}
+                {/* Spark */}
+                <div style={{ marginTop: 8 }}>
+                  <span style={{ fontWeight: 600 }}>Spark:</span>{" "}
+                  {selectedDecan.spark}
+                </div>
 
-              {ctxEntry.Question ? (
-                <>
-                  <div className="label">Personal Question</div>
-                  <div style={{ fontStyle: "italic" }}>{ctxEntry.Question}</div>
-                </>
-              ) : null}
-            </div>
-          ) : (
-            <div style={{ opacity: 0.7 }}>
-              No context found for this degree.
-            </div>
-          )}
+                {/* Deep Insight (trimmed) */}
+                <div style={{ marginTop: 8 }}>
+                  <span style={{ fontWeight: 600 }}>Deep Insight:</span>{" "}
+                  {trimInsight(selectedDecan.deep_insight, 3)}
+                </div>
+
+                {/* Poetic */}
+                <div
+                  style={{ marginTop: 8, fontStyle: "italic", opacity: 0.9 }}
+                >
+                  {selectedDecan.poetic}
+                </div>
+
+                {/* Influential wave chips */}
+                <div
+                  style={{
+                    display: "flex",
+                    gap: 6,
+                    flexWrap: "wrap",
+                    marginTop: 10,
+                  }}
+                >
+                  {(() => {
+                    const chips = parseWaves(selectedDecan.influential_waves_a);
+                    if (chips.length === 10) return <Chip label="All 10" />;
+                    return chips.map((n) => <Chip key={n} label={String(n)} />);
+                  })()}
+                </div>
+
+                {/* Link to Decan Library */}
+                <div style={{ marginTop: 10 }}>
+                  <a
+                    href={`/library/decans/${selectedDecan.sign}/${selectedDecan.decan_number}`}
+                    style={{ textDecoration: "underline" }}
+                  >
+                    Open Decan Library →
+                  </a>
+                </div>
+              </>
+            )}
+          </Section>
+
+          {/* ===================== STAGE 4: SYMBOLS ===================== */}
+          <Section title="Symbols">
+            {ctxEntry?.Sabian ? (
+              <>
+                <div className="label" style={{ fontSize: 16 }}>
+                  Sabian Symbol
+                </div>
+                <div style={{ fontSize: 15 }}>{ctxEntry.Sabian}</div>
+              </>
+            ) : null}
+
+            {ctxEntry?.Chandra ? (
+              <>
+                <div className="label" style={{ fontSize: 16, marginTop: 8 }}>
+                  Chandra Symbol
+                </div>
+                <div style={{ fontSize: 15 }}>{ctxEntry.Chandra}</div>
+              </>
+            ) : null}
+
+            {ctxEntry?.Question ? (
+              <>
+                <div className="label" style={{ marginTop: 8 }}>
+                  Personal Question
+                </div>
+                <div style={{ fontStyle: "italic" }}>{ctxEntry.Question}</div>
+              </>
+            ) : null}
+
+            {!ctxEntry?.Sabian && !ctxEntry?.Chandra && !ctxEntry?.Question ? (
+              <div className="dim">No symbols found for this degree.</div>
+            ) : null}
+          </Section>
+
+          {/* ===================== STAGE 5: DEEP DIVE (Placement Insight) ===================== */}
+          <Section title="Deep Dive">
+            {ctxEntry?.Note ? (
+              <>
+                <div className="label">Placement Insight</div>
+                <div style={{ whiteSpace: "pre-wrap" }}>{ctxEntry.Note}</div>
+              </>
+            ) : (
+              <div className="dim">
+                No placement insight available for this degree.
+              </div>
+            )}
+          </Section>
         </>
-      ) : (
-        <div style={{ opacity: 0.7 }}>Click a placement to see details.</div>
       )}
 
-      {/* CSV loader toggle */}
+      {/* CSV loader toggle (unchanged) */}
       {showCsvLoader && (
         <>
           <hr className="hr" />
@@ -272,17 +413,9 @@ export default function Sidebar({
         </>
       )}
 
-      {/* --------- DECAN BLOCK (back again!) --------- */}
-      {decan ? (
-        <>
-          <hr className="hr" />
-          <DecanBlock decan={decan} />
-        </>
-      ) : null}
-
       <hr className="hr" />
 
-      {/* --------- WAVE DETAILS --------- */}
+      {/* --------- WAVE DETAILS (existing browsing panel) --------- */}
       {waveDetails ? (
         <div>
           <div className="headerRow" style={{ marginTop: 6 }}>
@@ -330,6 +463,27 @@ export default function Sidebar({
         </div>
       )}
     </aside>
+  );
+}
+
+function Chip({ label }: { label: string }) {
+  return (
+    <span
+      className="chip"
+      style={{
+        border: "1px solid rgba(255,255,255,0.2)",
+        padding: "2px 8px",
+        borderRadius: 999,
+        fontSize: 12,
+      }}
+      title={
+        label === "All 10"
+          ? "All waves are influential in this decan"
+          : undefined
+      }
+    >
+      {label}
+    </span>
   );
 }
 
