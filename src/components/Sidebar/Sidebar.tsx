@@ -13,11 +13,10 @@ import {
   trimInsight,
   type DecanRecord,
 } from "../../data/decansLoader";
-// NOTE: We are no longer importing DecanMetaMap/getDecanEnriched/DecanBlock from the old system.
 
 import "./sidebar.css";
 
-// Small local Section helper for collapsible cards
+// Collapsible section
 function Section(props: {
   title: string;
   defaultOpen?: boolean;
@@ -59,9 +58,13 @@ type Props = {
   waveDetails?: WaveDetails | null;
   showCsvLoader?: boolean;
 
-  // wave-browsing support from App
+  // browsing support
   browsingWaveId?: number | null;
   onExitBrowsing?: () => void;
+
+  // optional callbacks (still supported)
+  onOpenWaveLibrary?: (waveId: number) => void;
+  onOpenDecanLibrary?: (sign: string, decan: number) => void;
 };
 
 export default function Sidebar({
@@ -72,8 +75,10 @@ export default function Sidebar({
   showCsvLoader = false,
   browsingWaveId = null,
   onExitBrowsing,
+  onOpenWaveLibrary,
+  onOpenDecanLibrary,
 }: Props) {
-  // ------- Context lookup for selected placement -------
+  // placement context lookup
   let ctxEntry: null | {
     Note?: string;
     Sabian?: string;
@@ -99,7 +104,7 @@ export default function Sidebar({
     }
   }
 
-  // ------- Load Decans from CSV (new canonical file) -------
+  // decans
   const [decans, setDecans] = useState<DecanRecord[] | null>(null);
   const [decansErr, setDecansErr] = useState<string | null>(null);
 
@@ -122,7 +127,7 @@ export default function Sidebar({
       ? getDecan(decans, normSign(selected.sign), Math.floor(selected.degree))
       : null;
 
-  // ------- CSV loader for custom context (unchanged) -------
+  // custom context CSV loader
   function onLoadCsvFromFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -195,12 +200,16 @@ export default function Sidebar({
       <h2 style={{ marginTop: 0 }}>Details</h2>
 
       {!selected ? (
-        <div style={{ opacity: 0.7 }}>Click a placement to see details.</div>
+        <div style={{ opacity: 0.7 }}>
+          Click a placement to see details.
+          <br />
+          <br />
+          Select a Wave (via the legend) to see its details here.
+        </div>
       ) : (
         <>
-          {/* ===================== STAGE 1: ANCHOR ===================== */}
+          {/* Stage 1: Anchor */}
           <Section title="Anchor" defaultOpen>
-            {/* Header: Planet (bigger) + Sign/Degree + Wave chip */}
             <div className="headerRow" style={{ marginTop: 4 }}>
               <span
                 className="chip"
@@ -220,7 +229,7 @@ export default function Sidebar({
             </div>
           </Section>
 
-          {/* Browsing banner (kept) */}
+          {/* Browsing banner */}
           {browsingWaveId != null && (
             <div
               className="chip"
@@ -252,7 +261,7 @@ export default function Sidebar({
             </div>
           )}
 
-          {/* ===================== STAGE 2: WAVE ===================== */}
+          {/* Stage 2: Wave */}
           <Section title="Wave" defaultOpen>
             {waveId ? (
               <>
@@ -260,13 +269,48 @@ export default function Sidebar({
                   Wave {waveId}
                   {waveName ? ` — ${waveName}` : ""}
                 </div>
-                {/* If you have anchors/one-liners available in your wave data, you can add them here */}
+
+                {/* same-tab link */}
                 <div style={{ marginTop: 8 }}>
                   <a
-                    href={`/library/waves/${waveId}`}
+                    href={`#/library/waves/${waveId}`}
+                    onClick={(e) => {
+                      // Cmd/Ctrl/Middle → open new tab
+                      if (e.metaKey || e.ctrlKey || e.button === 1) {
+                        e.preventDefault();
+                        window.open(
+                          `${window.location.origin}/#/library/waves/${waveId}`,
+                          "_blank",
+                          "noopener"
+                        );
+                        return;
+                      }
+                      // normal click → same tab (SPA)
+                      e.preventDefault();
+                      window.location.hash = `/library/waves/${waveId}`;
+                      onOpenWaveLibrary?.(waveId!);
+                    }}
                     style={{ textDecoration: "underline" }}
                   >
                     Open Wave Library →
+                  </a>
+                </div>
+
+                {/* explicit new-tab option */}
+                <div style={{ marginTop: 4 }}>
+                  <a
+                    href={`#/library/waves/${waveId}`}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      window.open(
+                        `${window.location.origin}/#/library/waves/${waveId}`,
+                        "_blank",
+                        "noopener"
+                      );
+                    }}
+                    style={{ textDecoration: "underline", opacity: 0.9 }}
+                  >
+                    Open in new tab ↗
                   </a>
                 </div>
               </>
@@ -275,7 +319,7 @@ export default function Sidebar({
             )}
           </Section>
 
-          {/* ===================== STAGE 3: DECAN ===================== */}
+          {/* Stage 3: Decan */}
           <Section title="Decan">
             {decansErr ? (
               <div style={{ color: "#f66" }}>
@@ -295,26 +339,22 @@ export default function Sidebar({
                   {selectedDecan.sub_sign} • Ruler: {selectedDecan.ruler}
                 </div>
 
-                {/* Spark */}
                 <div style={{ marginTop: 8 }}>
                   <span style={{ fontWeight: 600 }}>Spark:</span>{" "}
                   {selectedDecan.spark}
                 </div>
 
-                {/* Deep Insight (trimmed) */}
                 <div style={{ marginTop: 8 }}>
                   <span style={{ fontWeight: 600 }}>Deep Insight:</span>{" "}
                   {trimInsight(selectedDecan.deep_insight, 3)}
                 </div>
 
-                {/* Poetic */}
                 <div
                   style={{ marginTop: 8, fontStyle: "italic", opacity: 0.9 }}
                 >
                   {selectedDecan.poetic}
                 </div>
 
-                {/* Influential wave chips */}
                 <div
                   style={{
                     display: "flex",
@@ -330,20 +370,76 @@ export default function Sidebar({
                   })()}
                 </div>
 
-                {/* Link to Decan Library */}
+                {/* Decan I/II/III */}
+                <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+                  {[1, 2, 3].map((n) => (
+                    <button
+                      key={n}
+                      className="chip"
+                      style={{
+                        opacity: selectedDecan.decan_number === n ? 1 : 0.7,
+                        cursor: "pointer",
+                      }}
+                      title={["Decan I", "Decan II", "Decan III"][n - 1]}
+                      onClick={() => {
+                        window.location.hash = `/library/decans/${selectedDecan.sign}/${n}`;
+                        onOpenDecanLibrary?.(selectedDecan.sign, n);
+                      }}
+                    >
+                      {["I", "II", "III"][n - 1]}
+                    </button>
+                  ))}
+                </div>
+
+                {/* same-tab link */}
                 <div style={{ marginTop: 10 }}>
                   <a
-                    href={`/library/decans/${selectedDecan.sign}/${selectedDecan.decan_number}`}
+                    href={`#/library/decans/${selectedDecan.sign}/${selectedDecan.decan_number}`}
+                    onClick={(e) => {
+                      if (e.metaKey || e.ctrlKey || e.button === 1) {
+                        e.preventDefault();
+                        window.open(
+                          `${window.location.origin}/#/library/decans/${selectedDecan.sign}/${selectedDecan.decan_number}`,
+                          "_blank",
+                          "noopener"
+                        );
+                        return;
+                      }
+                      e.preventDefault();
+                      window.location.hash = `/library/decans/${selectedDecan.sign}/${selectedDecan.decan_number}`;
+                      onOpenDecanLibrary?.(
+                        selectedDecan.sign,
+                        selectedDecan.decan_number
+                      );
+                    }}
                     style={{ textDecoration: "underline" }}
                   >
                     Open Decan Library →
+                  </a>
+                </div>
+
+                {/* explicit new-tab option */}
+                <div style={{ marginTop: 4 }}>
+                  <a
+                    href={`#/library/decans/${selectedDecan.sign}/${selectedDecan.decan_number}`}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      window.open(
+                        `${window.location.origin}/#/library/decans/${selectedDecan.sign}/${selectedDecan.decan_number}`,
+                        "_blank",
+                        "noopener"
+                      );
+                    }}
+                    style={{ textDecoration: "underline", opacity: 0.9 }}
+                  >
+                    Open in new tab ↗
                   </a>
                 </div>
               </>
             )}
           </Section>
 
-          {/* ===================== STAGE 4: SYMBOLS ===================== */}
+          {/* Stage 4: Symbols */}
           <Section title="Symbols">
             {ctxEntry?.Sabian ? (
               <>
@@ -377,7 +473,7 @@ export default function Sidebar({
             ) : null}
           </Section>
 
-          {/* ===================== STAGE 5: DEEP DIVE (Placement Insight) ===================== */}
+          {/* Stage 5: Deep Dive */}
           <Section title="Deep Dive">
             {ctxEntry?.Note ? (
               <>
@@ -393,7 +489,7 @@ export default function Sidebar({
         </>
       )}
 
-      {/* CSV loader toggle (unchanged) */}
+      {/* CSV loader */}
       {showCsvLoader && (
         <>
           <hr className="hr" />
@@ -415,8 +511,8 @@ export default function Sidebar({
 
       <hr className="hr" />
 
-      {/* --------- WAVE DETAILS (existing browsing panel) --------- */}
-      {waveDetails ? (
+      {/* Wave details (only when browsing) */}
+      {browsingWaveId != null && waveDetails ? (
         <div>
           <div className="headerRow" style={{ marginTop: 6 }}>
             <span className="chip waveChip">W{waveDetails.shortId}</span>
