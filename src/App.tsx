@@ -1,3 +1,4 @@
+// src/App.tsx
 import React, {
   useEffect,
   useRef,
@@ -6,20 +7,24 @@ import React, {
   useCallback,
 } from "react";
 
+// Library pages
+import WaveLibraryPage from "./app/pages/WaveLibraryPage";
+import WaveLibraryIndexPage from "./app/pages/WaveLibraryIndexPage";
+import DecanLibraryPage from "./app/pages/DecanLibraryPage";
+import DecanLibraryIndexPage from "./app/pages/DecanLibraryIndexPage";
+
+// Core app imports used by the chart shell
 import { initialState } from "./app/state";
 import { ContextMap, Placement } from "./app/types";
-
 import Wheel from "./components/Wheel/Wheel";
 import Sidebar from "./components/Sidebar/Sidebar";
 import LegendBar from "./components/Controls/LegendBar";
+import DecanLegend from "./components/Controls/DecanLegend";
 import Tooltip, { TooltipData } from "./components/common/Tooltip";
-
 import HeaderBar from "./components/Header/HeaderBar";
 import TopControlsBar from "./components/Controls/TopControlsBar";
-
 import { LegalNotice } from "./components/Legal/LegalNotice";
 import { TermsOfUseModal } from "./components/Legal/TermsOfUseModal";
-
 import ResonanceSoundPrototype from "./features/sound/ResonanceSoundPrototype";
 
 import { waveIdForDegreeWithinSign } from "./utils/mapping";
@@ -38,6 +43,13 @@ type Mode = "manual" | "chart";
 const LS_MANUAL = "hww.placements.manual";
 const LS_CHART = "hww.placements.chart";
 const LS_THEME = "hww.theme";
+
+// NEW: persist transient UI so “Back to chart” restores state
+const LS_SELECTED = "hww.ui.selectedId";
+const LS_SIDEBAR_OPEN = "hww.ui.sidebarOpen";
+const LS_BROWSE_WAVE = "hww.ui.browseWaveId";
+const LS_MODE = "hww.ui.mode";
+
 const ASC_ALIASES = new Set(["ASC", "Asc", "Ascendant", "Asc."]);
 function deriveAscSignFromPlacements(
   items: { planet: string; sign: string }[]
@@ -46,23 +58,66 @@ function deriveAscSignFromPlacements(
   return asc?.sign;
 }
 
-export default function App() {
-  // Route guard
-  if (
-    typeof window !== "undefined" &&
-    window.location.pathname === "/sound-demo"
-  ) {
-    return <ResonanceSoundPrototype />;
-  }
+// Ensures document theme is applied even when landing directly on a library URL.
+function useApplyThemeOnce() {
+  useEffect(() => {
+    try {
+      const stored =
+        (localStorage.getItem(LS_THEME) as "light" | "dark" | null) || null;
+      const fallback =
+        window.matchMedia &&
+        window.matchMedia("(prefers-color-scheme: dark)").matches
+          ? "dark"
+          : "light";
+      const theme = stored || fallback;
+      document.documentElement.setAttribute("data-theme", theme);
+      if (theme === "light") document.documentElement.classList.add("light");
+      else document.documentElement.classList.remove("light");
+    } catch {}
+  }, []);
+}
 
+/* -------------------------
+   Chart application shell
+   -------------------------
+   NOTE: No routing and no export default here. Always renders the chart UI.
+*/
+function AppShell() {
   // ---------- state ----------
   const [context, setContext] = useState<ContextMap>(initialState.context);
-  const [mode, setMode] = useState<Mode>("manual");
+
+  // Mode with persistence
+  const [mode, setMode] = useState<Mode>(() => {
+    try {
+      return (localStorage.getItem(LS_MODE) as Mode) || "manual";
+    } catch {
+      return "manual";
+    }
+  });
+
   const [manualPlacements, setManualPlacements] = useState<Placement[]>([]);
   const [chartPlacements, setChartPlacements] = useState<Placement[]>([]);
-  const [selectedId, setSelectedId] = useState<string | undefined>();
-  const [browseWaveId, setBrowseWaveId] = useState<number | null>(null);
 
+  // Selected placement with persistence
+  const [selectedId, setSelectedId] = useState<string | undefined>(() => {
+    try {
+      return localStorage.getItem(LS_SELECTED) || undefined;
+    } catch {
+      return undefined;
+    }
+  });
+
+  // Browsed wave (legend) with persistence
+  const [browseWaveId, setBrowseWaveId] = useState<number | null>(() => {
+    try {
+      const raw = localStorage.getItem(LS_BROWSE_WAVE);
+      return raw ? Number(raw) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  // Theme
   const [theme, setTheme] = useState<"light" | "dark">(
     (localStorage.getItem(LS_THEME) as "light" | "dark") ||
       (matchMedia && matchMedia("(prefers-color-scheme: dark)").matches
@@ -70,8 +125,12 @@ export default function App() {
         : "light")
   );
   useEffect(() => {
-    localStorage.setItem(LS_THEME, theme);
+    try {
+      localStorage.setItem(LS_THEME, theme);
+    } catch {}
     document.documentElement.setAttribute("data-theme", theme);
+    if (theme === "light") document.documentElement.classList.add("light");
+    else document.documentElement.classList.remove("light");
   }, [theme]);
 
   // restore placements
@@ -95,6 +154,14 @@ export default function App() {
       localStorage.setItem(LS_CHART, JSON.stringify(chartPlacements));
     } catch {}
   }, [chartPlacements]);
+
+  // NEW: persist selected, sidebar, browse wave, and mode
+  useEffect(() => {
+    try {
+      if (selectedId) localStorage.setItem(LS_SELECTED, selectedId);
+      else localStorage.removeItem(LS_SELECTED);
+    } catch {}
+  }, [selectedId]);
 
   // autoload context
   useEffect(() => {
@@ -166,7 +233,9 @@ export default function App() {
           return {
             ...it,
             degree: deg,
-            id: `${it.planet}-${it.sign}-${deg}-${Math.random().toString(36).slice(2, 7)}`,
+            id: `${it.planet}-${it.sign}-${deg}-${Math.random()
+              .toString(36)
+              .slice(2, 7)}`,
           } as Placement;
         })
         .filter(Boolean) as Placement[];
@@ -233,7 +302,7 @@ export default function App() {
   const { width: wheelW, height: wheelH } = useElementSize(wheelRef.current);
   const wheelSize = Math.max(300, Math.floor(Math.min(wheelW, wheelH)));
 
-  // features ON by default (no public toggles)
+  // features ON by default
   const useGlyphs = true;
   const showHouses = true;
   const showAngles = true;
@@ -284,8 +353,36 @@ export default function App() {
     }
   }
 
+  // Sidebar open/closed with persistence
+  const [sidebarOpen, setSidebarOpen] = useState<boolean>(() => {
+    try {
+      const raw = localStorage.getItem(LS_SIDEBAR_OPEN);
+      return raw ? raw === "1" : true;
+    } catch {
+      return true;
+    }
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem(LS_SIDEBAR_OPEN, sidebarOpen ? "1" : "0");
+    } catch {}
+  }, [sidebarOpen]);
+
+  // Persist browse wave + mode
+  useEffect(() => {
+    try {
+      if (browseWaveId != null)
+        localStorage.setItem(LS_BROWSE_WAVE, String(browseWaveId));
+      else localStorage.removeItem(LS_BROWSE_WAVE);
+    } catch {}
+  }, [browseWaveId]);
+  useEffect(() => {
+    try {
+      localStorage.setItem(LS_MODE, mode);
+    } catch {}
+  }, [mode]);
+
   const [termsOpen, setTermsOpen] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
   const openSoundDemo = useCallback(
     () => window.open("/sound-demo", "_blank"),
     []
@@ -448,6 +545,19 @@ export default function App() {
               setBrowseWaveId(id);
             }}
           />
+
+          {/* Decan chips legend */}
+          <div style={{ marginTop: 8 }}>
+            <DecanLegend
+              selectedSign={placement ? (placement.sign as any) : null}
+              onSelect={(sign, n) => {
+                // Navigate to the Decan Library in the same tab (keeps state in localStorage)
+                window.location.hash = `#/library/decans/${encodeURIComponent(
+                  sign
+                )}/${n}`;
+              }}
+            />
+          </div>
         </div>
       </div>
 
@@ -456,4 +566,76 @@ export default function App() {
       <TermsOfUseModal open={termsOpen} onClose={() => setTermsOpen(false)} />
     </div>
   );
+}
+// --- keep everything above as-is ---
+
+/* ---------------- top-level hash router (NOT nested) ---------------- */
+
+type Route =
+  | { kind: "home" }
+  | { kind: "waveIndex" }
+  | { kind: "decanIndex" }
+  | { kind: "wave"; waveId: number }
+  | { kind: "decan"; sign: string; decan: 1 | 2 | 3 };
+
+function parseHash(h: string): Route {
+  if (!h) return { kind: "home" };
+
+  if (h === "#/library/waves") return { kind: "waveIndex" };
+  if (h === "#/library/decans") return { kind: "decanIndex" };
+
+  let m = h.match(/^#\/library\/waves\/(\d{1,2})$/);
+  if (m) {
+    const id = Number(m[1]);
+    if (id >= 1 && id <= 10) return { kind: "wave", waveId: id };
+  }
+
+  m = h.match(/^#\/library\/decans\/([^/]+)\/([123])$/);
+  if (m) {
+    const sign = decodeURIComponent(m[1]);
+    const dec = Number(m[2]) as 1 | 2 | 3;
+    return { kind: "decan", sign, decan: dec };
+  }
+
+  return { kind: "home" };
+}
+
+/** Default export used by src/main.tsx */
+export default function App() {
+  // Guard: standalone sound demo path
+  if (
+    typeof window !== "undefined" &&
+    window.location.pathname === "/sound-demo"
+  ) {
+    return <ResonanceSoundPrototype />;
+  }
+
+  // Make sure the theme is applied even when landing on a library URL
+  useApplyThemeOnce();
+
+  // Minimal, safe hash router
+  const [hash, setHash] = useState(
+    typeof window !== "undefined" ? window.location.hash : ""
+  );
+  useEffect(() => {
+    const on = () => setHash(window.location.hash);
+    window.addEventListener("hashchange", on);
+    return () => window.removeEventListener("hashchange", on);
+  }, []);
+
+  const route = parseHash(hash);
+
+  switch (route.kind) {
+    case "waveIndex":
+      return <WaveLibraryIndexPage />;
+    case "wave":
+      return <WaveLibraryPage waveId={route.waveId} />;
+    case "decanIndex":
+      return <DecanLibraryIndexPage />;
+    case "decan":
+      return <DecanLibraryPage sign={route.sign} decan={route.decan} />;
+    case "home":
+    default:
+      return <AppShell />;
+  }
 }
