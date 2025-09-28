@@ -1,0 +1,15 @@
+{
+  "setupTasks": [],
+  "tasks": {
+    "dev": {
+      "name": "Dev",
+      "command": "npm run dev",
+      "cwd": "/project/workspace",
+      "runAtStart": true,
+      "preview": {
+        "port": 5173
+      }
+    }
+  }
+}
+  
