@@ -1,3 +1,4 @@
+// src/components/Sidebar/Sidebar.tsx
 import React, { useEffect, useState } from "react";
 
 import type { ContextMap, Placement } from "../../app/types";
@@ -14,6 +15,13 @@ import {
   type DecanRecord,
 } from "../../data/decansLoader";
 
+import { CopyLinkButton } from "../CopyLinkButton";
+import LayerExamples from "./LayerExamples";
+import {
+  loadLayerExamplesFromCsv,
+  type LayerExample as GalleryExample,
+} from "../../data/layerExamplesCsvLoader";
+
 import "./sidebar.css";
 
 // Collapsible section
@@ -23,6 +31,7 @@ function Section(props: {
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(!!props.defaultOpen);
+  const id = `section-${props.title.replace(/\s+/g, "-")}`;
   return (
     <div
       className="rs-card"
@@ -42,11 +51,17 @@ function Section(props: {
           border: "none",
           color: "inherit",
         }}
+        aria-expanded={open}
+        aria-controls={id}
       >
         <span>{props.title}</span>
         <span>{open ? "▾" : "▸"}</span>
       </button>
-      {open && <div style={{ marginTop: 8 }}>{props.children}</div>}
+      {open && (
+        <div id={id} style={{ marginTop: 8 }}>
+          {props.children}
+        </div>
+      )}
     </div>
   );
 }
@@ -99,7 +114,7 @@ export default function Sidebar({
     if (waveId != null) {
       ctxEntry =
         (context as any)?.[`Wave${waveId}`]?.[signKey]?.[planetKey]?.[
-          String(deg)
+          String(Math.floor(selected.degree))
         ] ?? null;
     }
   }
@@ -110,12 +125,12 @@ export default function Sidebar({
 
   useEffect(() => {
     let alive = true;
-    loadDecans()
+    loadLayerExamplesFromCsv("data/Resonance_Gallery_12_Placements.csv")
       .then((rows) => {
-        if (alive) setDecans(rows);
+        if (alive) setExamples(rows);
       })
       .catch((e) => {
-        if (alive) setDecansErr(String(e?.message || e));
+        if (alive) setExamplesErr(String(e?.message || e));
       });
     return () => {
       alive = false;
@@ -127,7 +142,24 @@ export default function Sidebar({
       ? getDecan(decans, normSign(selected.sign), Math.floor(selected.degree))
       : null;
 
-  // custom context CSV loader
+  // CSV-backed "Examples" gallery (welcome card)
+  const [examples, setExamples] = useState<GalleryExample[] | null>(null);
+  const [examplesErr, setExamplesErr] = useState<string | null>(null);
+  useEffect(() => {
+    let alive = true;
+    loadLayerExamplesFromCsv()
+      .then((rows) => {
+        if (alive) setExamples(rows);
+      })
+      .catch((e) => {
+        if (alive) setExamplesErr(String(e?.message || e));
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  // custom context CSV loader (kept; hidden when showCsvLoader=false)
   function onLoadCsvFromFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -215,6 +247,7 @@ export default function Sidebar({
             Welcome to Soul Resonance Astrology
           </div>
 
+          {/* Short primer (always visible) */}
           <p style={{ margin: "8px 0" }}>
             This system reveals how your chart resonates across three layers of
             meaning:
@@ -222,23 +255,178 @@ export default function Sidebar({
 
           <ul style={{ margin: "8px 0 8px 18px" }}>
             <li>
-              <strong>Waves</strong> — the harmonic fields that shape your
-              soul’s rhythm.
+              <strong>Waves</strong> — harmonic fields that set the rhythm and
+              tone of your unfolding.
             </li>
             <li>
-              <strong>Decans</strong> — archetypal gateways within each sign.
+              <strong>Decans</strong> — archetypal gateways within each sign
+              (three per sign) that shape how the sign expresses.
             </li>
             <li>
-              <strong>Degrees</strong> — the precise resonance anchors where
-              your story unfolds.
+              <strong>Symbols</strong> — <em>degree-specific</em> intelligence
+              (Sabian/Chandra) that speaks to your exact placement. Symbols lean
+              on the precise degree; Waves and Decans provide the field and
+              frame.
             </li>
           </ul>
 
-          <p style={{ margin: "8px 0" }}>
-            Select a placement, Wave, or Decan to begin the journey. Each layer
-            deepens the picture, and together they weave the resonance of your
-            soul.
-          </p>
+          {/* Collapsible “How these layers work (1-minute read)” */}
+          <details style={{ marginTop: 12 }}>
+            <summary style={{ cursor: "pointer", fontWeight: 600 }}>
+              How these layers work (1-minute read)
+            </summary>
+
+            <div style={{ marginTop: 8, fontSize: 14, lineHeight: 1.6 }}>
+              <p>
+                <strong>Three lenses</strong> you’ll see throughout the app:
+              </p>
+              <ul style={{ margin: "6px 0 12px 18px" }}>
+                <li>
+                  <em>Wave</em> — the harmonic field (context, tone, “the
+                  music”).
+                </li>
+                <li>
+                  <em>Decan</em> — the archetypal stage inside the sign (how the
+                  sign plays out).
+                </li>
+                <li>
+                  <em>Symbols</em> — <em>degree-specific</em> notes
+                  (Sabian/Chandra) for the exact placement.
+                </li>
+              </ul>
+
+              <div
+                style={{
+                  border: "1px solid var(--rs-border)",
+                  borderRadius: 8,
+                  padding: "10px 12px",
+                  background: "var(--rs-surface)",
+                }}
+              >
+                <div style={{ fontWeight: 700, marginBottom: 6 }}>
+                  🌟 Example: Venus at 12° Leo{" "}
+                  <span style={{ opacity: 0.8 }}>(13th degree)</span>
+                </div>
+
+                {/* Wave */}
+                <div style={{ marginTop: 6 }}>
+                  <div style={{ fontWeight: 600 }}>
+                    1) Wave (the harmonic field) → Wave 2: The Soul Mirror
+                  </div>
+                  <p style={{ margin: "4px 0 0" }}>
+                    Venus here moves through the field of reflection and
+                    relationship. Value and beauty are revealed through
+                    mirroring — love becomes known in the way it resonates with
+                    others. This Wave sets the tone of dialogue, harmony, and
+                    reciprocity:
+                    <em>
+                      {" "}
+                      “You discover yourself in the mirror of what you love.”
+                    </em>
+                  </p>
+                </div>
+
+                {/* Decan */}
+                <div style={{ marginTop: 10 }}>
+                  <div style={{ fontWeight: 600 }}>
+                    2) Decan (the archetypal stage) → Leo Decan II: The Sculptor
+                    of Self{" "}
+                    <span style={{ opacity: 0.8 }}>(Jupiter influence)</span>
+                  </div>
+                  <p style={{ margin: "4px 0 0" }}>
+                    The second decan of Leo sculpts radiance into artistry and
+                    offering. Venus here learns that beauty is not simply
+                    display but must be refined, shaped, and devoted.
+                    Relationships become tests of grace and loyalty; creativity
+                    matures into form that serves more than ego.
+                  </p>
+                </div>
+
+                {/* Symbols */}
+                <div style={{ marginTop: 10 }}>
+                  <div style={{ fontWeight: 600 }}>
+                    3) Symbols (the precise note) → 13° Leo
+                  </div>
+
+                  <div style={{ marginTop: 6 }}>
+                    <div style={{ fontWeight: 600 }}>Sabian Symbol:</div>
+                    <div style={{ fontStyle: "italic" }}>
+                      “An old sea captain.”
+                    </div>
+                    <p style={{ margin: "4px 0 0" }}>
+                      Venus here carries the wisdom of journeys completed. Love
+                      and value are infused with memory, perspective, and the
+                      ability to hold steady after life’s storms. There is
+                      gravitas and a seasoned quality to affection and beauty.
+                    </p>
+                  </div>
+
+                  <div style={{ marginTop: 8 }}>
+                    <div style={{ fontWeight: 600 }}>Chandra Symbol:</div>
+                    <div style={{ fontStyle: "italic" }}>
+                      “A man painting scenes on a ceiling.”
+                    </div>
+                    <p style={{ margin: "4px 0 0" }}>
+                      Alongside this maturity comes aspiration. Venus longs to
+                      elevate beauty, to inspire, to raise love and creativity
+                      toward higher vision. What is ordinary is lifted toward
+                      the extraordinary.
+                    </p>
+                  </div>
+
+                  <p style={{ marginTop: 10 }}>
+                    Together, these symbols show a Venus that is both seasoned
+                    and aspiring: it holds the weight of past experience while
+                    striving to uplift the present into vision and artistry.
+                  </p>
+                </div>
+
+                {/* Synthesis */}
+                <div style={{ marginTop: 10 }}>
+                  <div style={{ fontWeight: 700 }}>🔑 The Synthesis</div>
+                  <ul style={{ margin: "6px 0 0 18px" }}>
+                    <li>
+                      <strong>Wave 2</strong> provides the field of mirroring
+                      and resonance.
+                    </li>
+                    <li>
+                      <strong>Leo Decan II</strong> frames that resonance as
+                      artistry and devotion.
+                    </li>
+                    <li>
+                      <strong>13° symbols</strong> ground it in lived detail:
+                      seasoned wisdom (sea captain) reaching upward (painted
+                      ceiling).
+                    </li>
+                  </ul>
+                  <p style={{ marginTop: 6 }}>
+                    ✨ This Venus is not only radiant in Leo — it is reflective,
+                    sculpted, and matured. Love here both remembers and aspires,
+                    carrying the weight of journeys past and the pull of vision
+                    above.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </details>
+
+          {/* CSV-backed Examples carousel */}
+          <details style={{ marginTop: 12 }} open>
+            <summary style={{ cursor: "pointer", fontWeight: 600 }}>
+              Examples (browse)
+            </summary>
+            <div style={{ marginTop: 8 }}>
+              {examplesErr ? (
+                <div style={{ color: "#f66" }}>
+                  Error loading examples: {examplesErr}
+                </div>
+              ) : examples?.length ? (
+                <LayerExamples examples={examples} />
+              ) : (
+                <div className="dim">No examples found.</div>
+              )}
+            </div>
+          </details>
         </div>
       ) : (
         <>
@@ -312,7 +500,7 @@ export default function Sidebar({
                     alignItems: "center",
                   }}
                 >
-                  {/* Same-tab: keeps app state */}
+                  {/* Same-tab */}
                   <a
                     href={`#/library/waves/${waveId}`}
                     onClick={(e) => {
@@ -322,6 +510,7 @@ export default function Sidebar({
                     }}
                     style={{ textDecoration: "underline" }}
                     title="Open Wave Library"
+                    aria-label="Open Wave in library (same tab)"
                   >
                     Open Wave Library →
                   </a>
@@ -338,9 +527,27 @@ export default function Sidebar({
                       textDecoration: "none",
                     }}
                     title="Open in new tab (↗)"
+                    aria-label="Open Wave in library (new tab)"
                   >
                     ↗
                   </a>
+                </div>
+
+                {/* Copy link for this Wave */}
+                <div
+                  style={{
+                    marginTop: 8,
+                    display: "flex",
+                    gap: 6,
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <CopyLinkButton
+                    ariaLabel="Copy link to this Wave"
+                    label="Copy link"
+                    getHashHref={() => `#/library/waves/${waveId}`}
+                    className="chip"
+                  />
                 </div>
               </>
             ) : (
@@ -366,6 +573,94 @@ export default function Sidebar({
                 <div style={{ fontWeight: 600 }}>{selectedDecan.title}</div>
                 <div style={{ opacity: 0.8, fontSize: 13, marginTop: 2 }}>
                   {selectedDecan.sub_sign} • Ruler: {selectedDecan.ruler}
+                </div>
+
+                {/* 1-minute read: What is a Decan? */}
+                <details style={{ marginTop: 8 }}>
+                  <summary style={{ cursor: "pointer", fontWeight: 600 }}>
+                    What is a Decan? (1-minute read)
+                  </summary>
+                  <div style={{ marginTop: 8, fontSize: 14, lineHeight: 1.55 }}>
+                    <p>
+                      Each sign spans 30°, and it’s divided into three{" "}
+                      <em>Decans</em> (10° each). Decans add a distinct
+                      archetypal flavor to the sign — like three chapters within
+                      the same book.
+                    </p>
+                    <ul style={{ margin: "6px 0 6px 18px" }}>
+                      <li>
+                        <strong>Decan I (0–9°)</strong> — the pure seed of the
+                        sign’s energy.
+                      </li>
+                      <li>
+                        <strong>Decan II (10–19°)</strong> — the sign matures; a
+                        secondary ruler adds emphasis.
+                      </li>
+                      <li>
+                        <strong>Decan III (20–29°)</strong> — refinement/mastery
+                        edge.
+                      </li>
+                    </ul>
+                    <p>
+                      In this system, Decans and their rulers set the{" "}
+                      <em>style</em> of expression inside a sign.
+                      <strong> Waves</strong> describe the broader harmonic
+                      field; <strong>Symbols</strong> (Sabian/Chandra) speak to
+                      the exact degree. Use the Decan to orient the story, then
+                      let the Symbol provide the precise, personal note.
+                    </p>
+                    <p style={{ opacity: 0.9 }}>
+                      Example: <strong>Venus at 12° Leo</strong> → Leo{" "}
+                      <strong>Decan II</strong> (Sun influence). The Decan
+                      frames expression; the degree’s Symbols bring a custom
+                      message for 12°.
+                    </p>
+                  </div>
+                </details>
+
+                {/* Quick jump to this sign's Decan Library */}
+                <div
+                  style={{
+                    marginTop: 8,
+                    display: "flex",
+                    gap: 8,
+                    alignItems: "center",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <a
+                    href={`#/library/decans/${encodeURIComponent(selectedDecan.sign)}/${selectedDecan.decan_number}`}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      window.location.hash = `#/library/decans/${encodeURIComponent(
+                        selectedDecan.sign
+                      )}/${selectedDecan.decan_number}`;
+                      onOpenDecanLibrary?.(
+                        selectedDecan.sign,
+                        selectedDecan.decan_number
+                      );
+                    }}
+                    style={{ textDecoration: "underline" }}
+                    aria-label="Open Decan Library (same tab)"
+                    title="Open Decan Library"
+                  >
+                    Learn more in Decan Library →
+                  </a>
+                  <a
+                    href={`#/library/decans/${encodeURIComponent(selectedDecan.sign)}/${selectedDecan.decan_number}`}
+                    target="_blank"
+                    rel="noopener"
+                    className="chip"
+                    style={{
+                      padding: "2px 8px",
+                      border: "1px solid var(--rs-border)",
+                      textDecoration: "none",
+                    }}
+                    aria-label="Open Decan Library (new tab)"
+                    title="Open in new tab (↗)"
+                  >
+                    ↗
+                  </a>
                 </div>
 
                 <div style={{ marginTop: 8 }}>
@@ -411,28 +706,29 @@ export default function Sidebar({
                       }}
                       title={["Decan I", "Decan II", "Decan III"][n - 1]}
                       onClick={() => {
-                        window.location.hash = `#/library/decans/${encodeURIComponent(
-                          selectedDecan.sign
-                        )}/${n}`;
+                        window.location.hash = `#/library/decans/${encodeURIComponent(selectedDecan.sign)}/${n}`;
                         onOpenDecanLibrary?.(selectedDecan.sign, n);
                       }}
+                      aria-label={`${selectedDecan.sign} — Decan ${["I", "II", "III"][n - 1]}`}
                     >
                       {["I", "II", "III"][n - 1]}
                     </button>
                   ))}
                 </div>
 
-                {/* Library links */}
+                {/* Library links + Copy link */}
                 <div
                   style={{
                     marginTop: 10,
                     display: "flex",
                     alignItems: "center",
+                    gap: 8,
+                    flexWrap: "wrap",
                   }}
                 >
-                  {/* Same-tab: keeps app state */}
+                  {/* Same-tab */}
                   <a
-                    href={`#/library/decans/${selectedDecan.sign}/${selectedDecan.decan_number}`}
+                    href={`#/library/decans/${encodeURIComponent(selectedDecan.sign)}/${selectedDecan.decan_number}`}
                     onClick={(e) => {
                       e.preventDefault();
                       window.location.hash = `#/library/decans/${encodeURIComponent(
@@ -445,24 +741,37 @@ export default function Sidebar({
                     }}
                     style={{ textDecoration: "underline" }}
                     title="Open the full Decan Library page"
+                    aria-label="Open Decan in library (same tab)"
                   >
                     Open Decan Library →
                   </a>
 
                   {/* New tab */}
                   <a
-                    href={`#/library/decans/${selectedDecan.sign}/${selectedDecan.decan_number}`}
+                    href={`#/library/decans/${encodeURIComponent(selectedDecan.sign)}/${selectedDecan.decan_number}`}
                     target="_blank"
                     rel="noopener"
+                    className="chip"
                     style={{
-                      marginLeft: 8,
-                      opacity: 0.85,
+                      padding: "2px 8px",
+                      border: "1px solid var(--rs-border)",
                       textDecoration: "none",
                     }}
                     title="Open in a new tab"
+                    aria-label="Open Decan in library (new tab)"
                   >
                     ↗
                   </a>
+
+                  {/* Copy link */}
+                  <CopyLinkButton
+                    ariaLabel="Copy link to this Decan"
+                    label="Copy link"
+                    getHashHref={() =>
+                      `#/library/decans/${encodeURIComponent(selectedDecan.sign)}/${selectedDecan.decan_number}`
+                    }
+                    className="chip"
+                  />
                 </div>
               </>
             )}
@@ -518,7 +827,7 @@ export default function Sidebar({
         </>
       )}
 
-      {/* CSV loader */}
+      {/* CSV loader (hidden if showCsvLoader=false) */}
       {showCsvLoader && (
         <>
           <hr className="hr" />
@@ -584,7 +893,8 @@ export default function Sidebar({
         </div>
       ) : (
         <div className="dim">
-          Select a Wave (via the legend) to see its details here.
+          Select a Wave (bottom legend) or choose a <strong>sign</strong> (Decan
+          chips) to dive into Decans I/II/III.
         </div>
       )}
     </aside>
