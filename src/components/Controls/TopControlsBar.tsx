@@ -9,8 +9,6 @@ interface TopControlsBarProps {
   onSwitchMode: (m: Mode) => void;
 
   // Data / loader / export
-  showContextLoader: boolean;
-  setShowContextLoader: (v: boolean) => void;
   loadBuiltInContext: () => void;
   getExportJSON: () => any;
   getExportCSV: () => any[];
@@ -24,8 +22,6 @@ interface TopControlsBarProps {
 export default function TopControlsBar({
   mode,
   onSwitchMode,
-  showContextLoader,
-  setShowContextLoader,
   loadBuiltInContext,
   getExportJSON,
   getExportCSV,
@@ -110,7 +106,7 @@ export default function TopControlsBar({
         </Pill>
       </Group>
 
-      {/* Reuse existing Controls component (includes Raw Import + Export & Data) */}
+      {/* Raw Import + Export & Data controls (no CSV toggle) */}
       <div
         style={{
           display: "flex",
@@ -140,9 +136,6 @@ export default function TopControlsBar({
           getExportJSON={getExportJSON}
           getExportCSV={getExportCSV}
         />
-        <Pill onClick={() => setShowContextLoader(!showContextLoader)}>
-          {showContextLoader ? "CSV On" : "CSV Off"}
-        </Pill>
       </div>
     </div>
   );

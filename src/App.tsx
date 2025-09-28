@@ -308,8 +308,6 @@ function AppShell() {
   const showAngles = true;
   const showDecans = true;
 
-  const [showContextLoader, setShowContextLoader] = useState(false);
-
   // Effective wave details
   const placement = placements.find((p) => p.id === selectedId) || null;
   const autoWaveId = placement
@@ -422,8 +420,6 @@ function AppShell() {
           <TopControlsBar
             mode={mode}
             onSwitchMode={switchMode}
-            showContextLoader={showContextLoader}
-            setShowContextLoader={setShowContextLoader}
             loadBuiltInContext={loadBuiltInContext}
             getExportJSON={getExportJSON}
             getExportCSV={getExportCSVRows}
@@ -514,7 +510,7 @@ function AppShell() {
                 setContext={setContext}
                 selected={placement}
                 waveDetails={selectedDetails}
-                showCsvLoader={showContextLoader}
+                showCsvLoader={false}
                 browsingWaveId={browseWaveId}
                 onExitBrowsing={() => setBrowseWaveId(null)}
               />

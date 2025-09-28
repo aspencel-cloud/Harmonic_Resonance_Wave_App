@@ -1,4 +1,9 @@
-import React from "react";
+import React, { useState } from "react";
+
+type Props = {
+  selectedSign: string | null; // e.g., "Aries"
+  onSelect: (sign: string, decan: 1 | 2 | 3) => void;
+};
 
 const SIGNS = [
   "Aries",
@@ -13,64 +18,58 @@ const SIGNS = [
   "Capricorn",
   "Aquarius",
   "Pisces",
-] as const;
-type Sign = (typeof SIGNS)[number];
-
-type Props = {
-  selectedSign?: string | null;
-  onSelect: (sign: Sign, decan: 1 | 2 | 3) => void;
-};
+];
 
 export default function DecanLegend({ selectedSign, onSelect }: Props) {
-  const openOrSelect = (
-    e: React.MouseEvent<HTMLButtonElement>,
-    sign: Sign,
-    n: 1 | 2 | 3
-  ) => {
-    if (e.shiftKey) {
-      const base = window.location.href.split("#")[0];
-      const url = `${base}#/library/decans/${encodeURIComponent(sign)}/${n}`;
-      window.open(url, "_blank", "noopener");
-      return;
-    }
-    onSelect(sign, n);
-  };
+  const [openSign, setOpenSign] = useState<string | null>(null);
+
+  function toggleSign(sign: string) {
+    setOpenSign((s) => (s === sign ? null : sign));
+  }
 
   return (
-    <div
-      style={{
-        display: "flex",
-        gap: 8,
-        overflowX: "auto",
-        padding: "6px 0",
-        WebkitOverflowScrolling: "touch",
-      }}
-      aria-label="Decan legend"
-      title="Click to open the Decan Library (Shift-click for a new tab)"
-    >
-      {SIGNS.map((sign) =>
-        [1, 2, 3].map((n) => {
-          const isSel =
-            selectedSign && selectedSign.toLowerCase() === sign.toLowerCase();
-          return (
+    <div aria-label="Decan Navigator" role="group">
+      {/* Row 1: Signs */}
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        {SIGNS.map((sign) => (
+          <button
+            key={sign}
+            className="chip"
+            type="button"
+            aria-expanded={openSign === sign}
+            aria-label={`Choose ${sign} to pick a decan`}
+            style={{
+              opacity: selectedSign === sign ? 1 : 0.95,
+              border:
+                openSign === sign
+                  ? "1px solid var(--rs-accent, #7aa7ff)"
+                  : "1px solid var(--rs-border)",
+            }}
+            onClick={() => toggleSign(sign)}
+          >
+            {sign}
+          </button>
+        ))}
+      </div>
+
+      {/* Row 2: Decans for open sign */}
+      {openSign && (
+        <div
+          style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}
+        >
+          {[1, 2, 3].map((n) => (
             <button
-              key={`${sign}-${n}`}
-              onClick={(e) => openOrSelect(e, sign, n as 1 | 2 | 3)}
+              key={n}
               className="chip"
-              style={{
-                whiteSpace: "nowrap",
-                padding: "6px 10px",
-                borderRadius: 999,
-                border: "1px solid var(--rs-border)",
-                background: isSel ? "rgba(255,255,255,0.08)" : "transparent",
-                color: "inherit",
-                cursor: "pointer",
-              }}
+              type="button"
+              aria-label={`${openSign} Decan ${["I", "II", "III"][n - 1]}`}
+              onClick={() => onSelect(openSign, n as 1 | 2 | 3)}
+              title={`${openSign} — Decan ${["I", "II", "III"][n - 1]}`}
             >
-              {sign} {["I", "II", "III"][n - 1]}
+              {["Decan I", "Decan II", "Decan III"][n - 1]}
             </button>
-          );
-        })
+          ))}
+        </div>
       )}
     </div>
   );
