@@ -195,20 +195,54 @@ export default function Sidebar({
     reader.readAsText(file);
   }
 
+  // ---------- RENDER ----------
   return (
     <aside className="aside">
       <h2 style={{ marginTop: 0 }}>Details</h2>
 
       {!selected ? (
-        <div style={{ opacity: 0.7 }}>
-          Click a placement to see details.
-          <br />
-          <br />
-          Select a Wave (via the legend) to see its details here.
+        <div
+          className="rs-card"
+          style={{
+            padding: 16,
+            borderRadius: 12,
+            lineHeight: 1.6,
+            background: "var(--rs-surface)",
+            border: "1px solid var(--rs-border)",
+          }}
+        >
+          <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>
+            Welcome to Soul Resonance Astrology
+          </div>
+
+          <p style={{ margin: "8px 0" }}>
+            This system reveals how your chart resonates across three layers of
+            meaning:
+          </p>
+
+          <ul style={{ margin: "8px 0 8px 18px" }}>
+            <li>
+              <strong>Waves</strong> — the harmonic fields that shape your
+              soul’s rhythm.
+            </li>
+            <li>
+              <strong>Decans</strong> — archetypal gateways within each sign.
+            </li>
+            <li>
+              <strong>Degrees</strong> — the precise resonance anchors where
+              your story unfolds.
+            </li>
+          </ul>
+
+          <p style={{ margin: "8px 0" }}>
+            Select a placement, Wave, or Decan to begin the journey. Each layer
+            deepens the picture, and together they weave the resonance of your
+            soul.
+          </p>
         </div>
       ) : (
         <>
-          {/* Stage 1: Anchor */}
+          {/* ===================== STAGE 1: ANCHOR ===================== */}
           <Section title="Anchor" defaultOpen>
             <div className="headerRow" style={{ marginTop: 4 }}>
               <span
@@ -261,7 +295,7 @@ export default function Sidebar({
             </div>
           )}
 
-          {/* Stage 2: Wave */}
+          {/* ===================== STAGE 2: WAVE (mid-range) ===================== */}
           <Section title="Wave" defaultOpen>
             {waveId ? (
               <>
@@ -270,47 +304,42 @@ export default function Sidebar({
                   {waveName ? ` — ${waveName}` : ""}
                 </div>
 
-                {/* same-tab link */}
-                <div style={{ marginTop: 8 }}>
+                <div
+                  style={{
+                    marginTop: 8,
+                    display: "flex",
+                    gap: 8,
+                    alignItems: "center",
+                  }}
+                >
+                  {/* Same-tab: keeps app state */}
                   <a
                     href={`#/library/waves/${waveId}`}
                     onClick={(e) => {
-                      // Cmd/Ctrl/Middle → open new tab
-                      if (e.metaKey || e.ctrlKey || e.button === 1) {
-                        e.preventDefault();
-                        window.open(
-                          `${window.location.origin}/#/library/waves/${waveId}`,
-                          "_blank",
-                          "noopener"
-                        );
-                        return;
-                      }
-                      // normal click → same tab (SPA)
                       e.preventDefault();
-                      window.location.hash = `/library/waves/${waveId}`;
-                      onOpenWaveLibrary?.(waveId!);
+                      window.location.hash = `#/library/waves/${waveId}`;
+                      onOpenWaveLibrary?.(waveId);
                     }}
                     style={{ textDecoration: "underline" }}
+                    title="Open Wave Library"
                   >
                     Open Wave Library →
                   </a>
-                </div>
 
-                {/* explicit new-tab option */}
-                <div style={{ marginTop: 4 }}>
+                  {/* New tab */}
                   <a
                     href={`#/library/waves/${waveId}`}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      window.open(
-                        `${window.location.origin}/#/library/waves/${waveId}`,
-                        "_blank",
-                        "noopener"
-                      );
+                    target="_blank"
+                    rel="noopener"
+                    className="chip"
+                    style={{
+                      padding: "2px 8px",
+                      border: "1px solid var(--rs-border)",
+                      textDecoration: "none",
                     }}
-                    style={{ textDecoration: "underline", opacity: 0.9 }}
+                    title="Open in new tab (↗)"
                   >
-                    Open in new tab ↗
+                    ↗
                   </a>
                 </div>
               </>
@@ -319,7 +348,7 @@ export default function Sidebar({
             )}
           </Section>
 
-          {/* Stage 3: Decan */}
+          {/* ===================== STAGE 3: DECAN ===================== */}
           <Section title="Decan">
             {decansErr ? (
               <div style={{ color: "#f66" }}>
@@ -370,7 +399,7 @@ export default function Sidebar({
                   })()}
                 </div>
 
-                {/* Decan I/II/III */}
+                {/* Decan I/II/III quick nav chips */}
                 <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
                   {[1, 2, 3].map((n) => (
                     <button
@@ -382,7 +411,9 @@ export default function Sidebar({
                       }}
                       title={["Decan I", "Decan II", "Decan III"][n - 1]}
                       onClick={() => {
-                        window.location.hash = `/library/decans/${selectedDecan.sign}/${n}`;
+                        window.location.hash = `#/library/decans/${encodeURIComponent(
+                          selectedDecan.sign
+                        )}/${n}`;
                         onOpenDecanLibrary?.(selectedDecan.sign, n);
                       }}
                     >
@@ -391,55 +422,53 @@ export default function Sidebar({
                   ))}
                 </div>
 
-                {/* same-tab link */}
-                <div style={{ marginTop: 10 }}>
+                {/* Library links */}
+                <div
+                  style={{
+                    marginTop: 10,
+                    display: "flex",
+                    alignItems: "center",
+                  }}
+                >
+                  {/* Same-tab: keeps app state */}
                   <a
                     href={`#/library/decans/${selectedDecan.sign}/${selectedDecan.decan_number}`}
                     onClick={(e) => {
-                      if (e.metaKey || e.ctrlKey || e.button === 1) {
-                        e.preventDefault();
-                        window.open(
-                          `${window.location.origin}/#/library/decans/${selectedDecan.sign}/${selectedDecan.decan_number}`,
-                          "_blank",
-                          "noopener"
-                        );
-                        return;
-                      }
                       e.preventDefault();
-                      window.location.hash = `/library/decans/${selectedDecan.sign}/${selectedDecan.decan_number}`;
+                      window.location.hash = `#/library/decans/${encodeURIComponent(
+                        selectedDecan.sign
+                      )}/${selectedDecan.decan_number}`;
                       onOpenDecanLibrary?.(
                         selectedDecan.sign,
                         selectedDecan.decan_number
                       );
                     }}
                     style={{ textDecoration: "underline" }}
+                    title="Open the full Decan Library page"
                   >
                     Open Decan Library →
                   </a>
-                </div>
 
-                {/* explicit new-tab option */}
-                <div style={{ marginTop: 4 }}>
+                  {/* New tab */}
                   <a
                     href={`#/library/decans/${selectedDecan.sign}/${selectedDecan.decan_number}`}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      window.open(
-                        `${window.location.origin}/#/library/decans/${selectedDecan.sign}/${selectedDecan.decan_number}`,
-                        "_blank",
-                        "noopener"
-                      );
+                    target="_blank"
+                    rel="noopener"
+                    style={{
+                      marginLeft: 8,
+                      opacity: 0.85,
+                      textDecoration: "none",
                     }}
-                    style={{ textDecoration: "underline", opacity: 0.9 }}
+                    title="Open in a new tab"
                   >
-                    Open in new tab ↗
+                    ↗
                   </a>
                 </div>
               </>
             )}
           </Section>
 
-          {/* Stage 4: Symbols */}
+          {/* ===================== STAGE 4: SYMBOLS ===================== */}
           <Section title="Symbols">
             {ctxEntry?.Sabian ? (
               <>
@@ -473,7 +502,7 @@ export default function Sidebar({
             ) : null}
           </Section>
 
-          {/* Stage 5: Deep Dive */}
+          {/* ===================== STAGE 5: DEEP DIVE ===================== */}
           <Section title="Deep Dive">
             {ctxEntry?.Note ? (
               <>
