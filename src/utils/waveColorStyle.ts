@@ -1,4 +1,4 @@
-import * as palette from "../data/waveColors.ts";
+import * as palette from "../data/waveColors";
 
 export type WaveKey =
   | "W1"
