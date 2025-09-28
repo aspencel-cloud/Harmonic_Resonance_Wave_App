@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build && cp dist/index.html dist/404.html",
+    "build": "tsc -b && vite build",
+    "postbuild": "node -e \"import('fs').then(fs => fs.copyFileSync('dist/index.html','dist/404.html'))\"",
     "preview": "vite preview --port 5173",
     "lint": "eslint \"src/**/*.{ts,tsx,js,jsx}\" --max-warnings=0",
     "lint:fix": "eslint \"src/**/*.{ts,tsx,js,jsx}\" --fix",
@@ -13,7 +14,9 @@
     "validate:decans": "node tools/validate-decans.mjs",
     "check:decans": "node tools/decans-smoke.mjs",
     "build:waves": "node tools/build-waves.mjs",
-    "validate:waves": "node tools/validate-waves.mjs"
+    "validate:waves": "node tools/validate-waves.mjs",
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d dist"
   },
   "dependencies": {
     "papaparse": "^5.4.1",
@@ -26,6 +29,7 @@
     "@types/react-dom": "^18.2.11",
     "@vitejs/plugin-react": "^4.3.0",
     "eslint-plugin-prettier": "^5.5.4",
+    "gh-pages": "^6.3.0",
     "prettier": "^3.6.2",
     "typescript": "^5.5.4",
     "vite": "^5.4.2"

@@ -2,7 +2,8 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
-export default defineConfig(({ mode }) => ({
+export default defineConfig({
   plugins: [react()],
-  base: mode === "production" ? "/Harmonic_Resonance_Wave_App/" : "/",
-}));
+  // IMPORTANT: must match your repo name exactly (case-sensitive)
+  base: "/Harmonic_Resonance_Wave_App/",
+});
