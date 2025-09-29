@@ -38,3 +38,4 @@ Thumbs.db
 # VSCode local history (optional)
 .history/
 
+"tsconfig.tsbuildinfo" 
