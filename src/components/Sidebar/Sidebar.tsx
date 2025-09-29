@@ -230,7 +230,7 @@ export default function Sidebar({
   // ---------- RENDER ----------
   return (
     <aside className="aside">
-      <h2 style={{ marginTop: 0 }}>Details</h2>
+      <h2 style={{ marginTop: 0 }}>Resonance Reading</h2>
 
       {!selected ? (
         <div
@@ -430,8 +430,8 @@ export default function Sidebar({
         </div>
       ) : (
         <>
-          {/* ===================== STAGE 1: ANCHOR ===================== */}
-          <Section title="Anchor" defaultOpen>
+          {/* ===================== STAGE 1: Selected Placement ===================== */}
+          <Section title="Selected Placement" defaultOpen>
             <div className="headerRow" style={{ marginTop: 4 }}>
               <span
                 className="chip"
@@ -557,6 +557,35 @@ export default function Sidebar({
 
           {/* ===================== STAGE 3: DECAN ===================== */}
           <Section title="Decan">
+            {/* Always-available quick nav chips (work even before CSV finishes loading) */}
+            {selected ? (
+              <div
+                style={{
+                  display: "flex",
+                  gap: 6,
+                  marginBottom: 8,
+                  flexWrap: "wrap",
+                }}
+              >
+                {[1, 2, 3].map((n) => (
+                  <button
+                    key={n}
+                    className="chip"
+                    style={{ cursor: "pointer" }}
+                    title={["Decan I", "Decan II", "Decan III"][n - 1]}
+                    aria-label={`Open ${normSign(selected.sign)} Decan ${["I", "II", "III"][n - 1]} in library`}
+                    onClick={() => {
+                      const sign = normSign(selected.sign);
+                      window.location.hash = `#/library/decans/${encodeURIComponent(sign)}/${n}`;
+                      onOpenDecanLibrary?.(sign, n);
+                    }}
+                  >
+                    {["I", "II", "III"][n - 1]}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+
             {decansErr ? (
               <div style={{ color: "#f66" }}>
                 Error loading decans: {decansErr}
@@ -692,28 +721,6 @@ export default function Sidebar({
                     if (chips.length === 10) return <Chip label="All 10" />;
                     return chips.map((n) => <Chip key={n} label={String(n)} />);
                   })()}
-                </div>
-
-                {/* Decan I/II/III quick nav chips */}
-                <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
-                  {[1, 2, 3].map((n) => (
-                    <button
-                      key={n}
-                      className="chip"
-                      style={{
-                        opacity: selectedDecan.decan_number === n ? 1 : 0.7,
-                        cursor: "pointer",
-                      }}
-                      title={["Decan I", "Decan II", "Decan III"][n - 1]}
-                      onClick={() => {
-                        window.location.hash = `#/library/decans/${encodeURIComponent(selectedDecan.sign)}/${n}`;
-                        onOpenDecanLibrary?.(selectedDecan.sign, n);
-                      }}
-                      aria-label={`${selectedDecan.sign} — Decan ${["I", "II", "III"][n - 1]}`}
-                    >
-                      {["I", "II", "III"][n - 1]}
-                    </button>
-                  ))}
                 </div>
 
                 {/* Library links + Copy link */}

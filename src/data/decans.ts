@@ -1,139 +1,144 @@
 // src/data/decans.ts
-// Loader for /public/decans.csv -> Map("Sign:DecanNumber" => DecanMeta)
+// Loader for /public/data/decans.csv -> Map("Sign:DecanNumber" => DecanMeta)
 
-export type DecanMeta = {
-  Sign: string; // Aries...
-  Decan_Number: 1 | 2 | 3;
-  Label?: string;
-  Ruler?: string;
-  Subsign?: string;
-  Degree_Start?: number;
-  Degree_End?: number;
+import { normSign } from "./aliases";
 
-  // Optional prose fields (all from your CSV)
-  Structural_Function?: string;
-  Phase_Tone?: string;
-  One_Liner?: string;
-  Field_Function?: string;
-  Wave_Summary?: string;
-  Poetic_Short?: string;
-};
+export type DecanMeta = { title: string; ruler?: string; sub_sign?: string };
+export type DecanMetaMap = Map<string, DecanMeta>;
 
-export type DecanMetaMap = Map<string, DecanMeta>; // key: "Aries:1"
+/* BASE_URL-safe join */
+const BASE: string = (import.meta.env.BASE_URL || "/") as string;
+const withBase = (p: string) =>
+  (BASE.endsWith("/") ? BASE : BASE + "/") + p.replace(/^\/+/, "");
 
-function norm(s: string) {
-  return (s ?? "").trim();
-}
-
-// split a CSV line that may contain quoted commas
-function splitCsvLine(line: string, expectedCols: number): string[] {
+/* CSV helpers with delimiter detection */
+function splitCsvCommaWithQuotes(line: string): string[] {
   const out: string[] = [];
-  let cur = "";
-  let i = 0;
-  let inQ = false;
+  let cur = "",
+    i = 0,
+    inQ = false;
   while (i < line.length) {
     const ch = line[i];
     if (inQ) {
       if (ch === '"' && line[i + 1] === '"') {
         cur += '"';
         i += 2;
-      } else if (ch === '"') {
+        continue;
+      }
+      if (ch === '"') {
         inQ = false;
         i++;
-      } else {
-        cur += ch;
-        i++;
+        continue;
       }
-    } else {
-      if (ch === '"') {
-        inQ = true;
-        i++;
-      } else if (ch === ",") {
-        out.push(cur);
-        cur = "";
-        i++;
-      } else {
-        cur += ch;
-        i++;
-      }
+      cur += ch;
+      i++;
+      continue;
     }
+    if (ch === '"') {
+      inQ = true;
+      i++;
+      continue;
+    }
+    if (ch === ",") {
+      out.push(cur);
+      cur = "";
+      i++;
+      continue;
+    }
+    cur += ch;
+    i++;
   }
   out.push(cur);
-  while (out.length < expectedCols) out.push("");
   return out;
 }
+function splitByDelim(line: string, delim: string): string[] {
+  return delim === "," ? splitCsvCommaWithQuotes(line) : line.split(delim);
+}
+const normHead = (h: string) => h.trim().toLowerCase().replace(/\s+/g, "_");
+function detectDelimiter(lines: string[]): string {
+  const candidates = ["\t", ",", ";", "|"];
+  const sample = lines.slice(0, Math.min(10, lines.length)).filter(Boolean);
+  let best = { score: -1, delim: "," };
+  for (const d of candidates) {
+    const cols = splitByDelim(sample[0], d).map(normHead);
+    const hasSign = cols.includes("sign");
+    const hasDec = cols.includes("decan") || cols.includes("decan_number");
+    const width = cols.length;
+    const score = (hasSign ? 10 : 0) + (hasDec ? 5 : 0) + width;
+    if (score > best.score) best = { score, delim: d };
+  }
+  return best.delim;
+}
+const idxOf = (hdr: string[], ...alts: string[]) => {
+  const wants = alts.map(normHead);
+  for (let i = 0; i < hdr.length; i++)
+    if (wants.includes(normHead(hdr[i]))) return i;
+  return -1;
+};
+const safe = (cells: string[], i: number) =>
+  i >= 0 && i < cells.length ? (cells[i] ?? "").trim() : "";
 
-export async function loadDecans(): Promise<DecanMetaMap> {
-  const res = await fetch("/decans.csv", { cache: "no-store" });
-  if (!res.ok) throw new Error(`Failed to fetch decans.csv (${res.status})`);
-  const text = await res.text();
+function parseDecanFromString(v: string): 1 | 2 | 3 | null {
+  const s = (v || "").trim();
+  const dm = s.match(/\b([123])\b/);
+  if (dm) return Number(dm[1]) as 1 | 2 | 3;
+  const sl = s.toLowerCase();
+  if (/\b(iii|ⅲ)\b/.test(sl)) return 3;
+  if (/\b(ii|ⅱ)\b/.test(sl)) return 2;
+  if (/\b(i|ⅰ)\b/.test(sl)) return 1;
+  return null;
+}
+function parseDecanFromRange(range: string): 1 | 2 | 3 | null {
+  const nums = (range || "").match(/\d+/g);
+  if (!nums) return null;
+  const first = parseInt(nums[0], 10);
+  if (first <= 9) return 1;
+  if (first <= 19) return 2;
+  if (first <= 29) return 3;
+  return null;
+}
 
+export async function loadDecanMetaMap(): Promise<DecanMetaMap> {
+  const url = withBase("data/decans.csv");
+  const res = await fetch(url, { cache: "no-store" });
+  if (!res.ok)
+    throw new Error(`Failed to fetch decans.csv (${res.status}) @ ${res.url}`);
+
+  const text = (await res.text()).replace(/^\uFEFF/, "");
   const lines = text.split(/\r?\n/).filter((l) => l.trim().length);
   if (lines.length <= 1) return new Map();
 
-  const header = lines[0].split(",").map((h) => norm(h).toLowerCase());
-  const idx = (name: string) => header.indexOf(name);
+  const delim = detectDelimiter(lines);
+  const header = splitByDelim(lines[0], delim);
 
-  const getIdx = (...names: string[]) =>
-    names.map((n) => idx(n.toLowerCase())).find((i) => i >= 0) ?? -1;
-
-  const iSign = getIdx("sign");
-  const iDec = getIdx("decan_number", "decan", "number");
-  const iLabel = getIdx("label", "name", "title");
-  const iRuler = getIdx("ruler", "face", "face_ruler");
-  const iSub = getIdx("subsign", "sub_sign", "sub-sign");
-  const iStart = getIdx("degree_start", "start", "start_degree");
-  const iEnd = getIdx("degree_end", "end", "end_degree");
-
-  const iStruct = getIdx("structural_function");
-  const iTone = getIdx("phase_tone", "tone");
-  const iOne = getIdx("one_liner", "one-line", "one_line");
-  const iField = getIdx("field_function");
-  const iWaveS = getIdx("wave_summary", "wave_summary_text");
-  const iPoet = getIdx("poetic_short", "poetic");
+  const iSign = idxOf(header, "sign");
+  const iDec = idxOf(header, "decan", "decan_number", "decan_num", "number");
+  const iTitle = idxOf(header, "title");
+  const iSub = idxOf(header, "sub_sign", "sub sign", "subsign");
+  const iRuler = idxOf(header, "ruler");
+  const iRange = idxOf(header, "range", "degree_range");
 
   const map: DecanMetaMap = new Map();
-
   for (let r = 1; r < lines.length; r++) {
-    const cells = splitCsvLine(lines[r], header.length);
-    if (!cells.length) continue;
+    const cells = splitByDelim(lines[r], delim);
+    const sign = normSign(safe(cells, iSign));
+    if (!sign) continue;
 
-    const Sign = norm(cells[iSign] || "");
-    const Decan_Number = Number(norm(cells[iDec] || "")) as 1 | 2 | 3;
-    if (!Sign || ![1, 2, 3].includes(Decan_Number)) continue;
+    let dec = parseDecanFromString(safe(cells, iDec));
+    if (dec == null) dec = parseDecanFromRange(safe(cells, iRange));
+    if (dec == null) dec = parseDecanFromString(safe(cells, iTitle));
+    if (dec == null) continue;
 
-    const m: DecanMeta = {
-      Sign,
-      Decan_Number,
-      Label: norm(cells[iLabel] || ""),
-      Ruler: norm(cells[iRuler] || ""),
-      Subsign: norm(cells[iSub] || ""),
-      Degree_Start: Number(norm(cells[iStart] || "")),
-      Degree_End: Number(norm(cells[iEnd] || "")),
-      Structural_Function: norm(cells[iStruct] || ""),
-      Phase_Tone: norm(cells[iTone] || ""),
-      One_Liner: norm(cells[iOne] || ""),
-      Field_Function: norm(cells[iField] || ""),
-      Wave_Summary: norm(cells[iWaveS] || ""),
-      Poetic_Short: norm(cells[iPoet] || ""),
-    };
-
-    // empty strings -> undefined (tidier)
-    Object.keys(m).forEach((k) => {
-      const key = k as keyof DecanMeta;
-      if (typeof m[key] === "string" && (m[key] as any).trim() === "") {
-        (m as any)[key] = undefined;
-      }
-      if (
-        (key === "Degree_Start" || key === "Degree_End") &&
-        Number.isNaN(m[key] as any)
-      ) {
-        (m as any)[key] = undefined;
-      }
+    map.set(`${sign}:${dec}`, {
+      title: safe(cells, iTitle),
+      sub_sign: safe(cells, iSub) || undefined,
+      ruler: safe(cells, iRuler) || undefined,
     });
-
-    map.set(`${Sign}:${Decan_Number}`, m);
   }
 
   return map;
 }
+
+// Back-compat aliases some code may import
+export { loadDecanMetaMap as loadDecansMap };
+export { loadDecanMetaMap as loadDecansMeta };
