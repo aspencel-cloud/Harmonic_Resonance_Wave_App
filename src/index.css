@@ -51,6 +51,18 @@ body,
   --rs-text: #1b1f26; /* general text */
   --rs-muted: #5b6572;
   --rs-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+
+  /* Wave palette variables (shared by JS + CSS) */
+  --wave-1: #ef4444;
+  --wave-2: #f59e0b;
+  --wave-3: #22c55e;
+  --wave-4: #3b82f6;
+  --wave-5: #a855f7;
+  --wave-6: #0ea5e9;
+  --wave-7: #10b981;
+  --wave-8: #06b6d4;
+  --wave-9: #eab308;
+  --wave-10: #fb7185;
 }
 
 /* ---- Dark ---- */
@@ -76,6 +88,18 @@ body,
   --rs-text: #e7ecf3;
   --rs-muted: #a9b1bd;
   --rs-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+
+  /* Wave palette (same as light by default; change if you want different dark colors) */
+  --wave-1: #ef4444;
+  --wave-2: #f59e0b;
+  --wave-3: #22c55e;
+  --wave-4: #3b82f6;
+  --wave-5: #a855f7;
+  --wave-6: #0ea5e9;
+  --wave-7: #10b981;
+  --wave-8: #06b6d4;
+  --wave-9: #eab308;
+  --wave-10: #fb7185;
 }
 
 /* ===============================
@@ -192,34 +216,34 @@ text {
   font-weight: 700;
 }
 
-/* Wave accent rings (stroke only, leaves fill to theme) */
+/* Wave accent rings (stroke only, now read from variables) */
 .wave-1 {
-  stroke: #ef4444;
+  stroke: var(--wave-1);
 }
 .wave-2 {
-  stroke: #f59e0b;
+  stroke: var(--wave-2);
 }
 .wave-3 {
-  stroke: #22c55e;
+  stroke: var(--wave-3);
 }
 .wave-4 {
-  stroke: #3b82f6;
+  stroke: var(--wave-4);
 }
 .wave-5 {
-  stroke: #a855f7;
+  stroke: var(--wave-5);
 }
 .wave-6 {
-  stroke: #0ea5e9;
+  stroke: var(--wave-6);
 }
 .wave-7 {
-  stroke: #10b981;
+  stroke: var(--wave-7);
 }
 .wave-8 {
-  stroke: #06b6d4;
+  stroke: var(--wave-8);
 }
 .wave-9 {
-  stroke: #eab308;
+  stroke: var(--wave-9);
 }
 .wave-10 {
-  stroke: #fb7185;
+  stroke: var(--wave-10);
 }
