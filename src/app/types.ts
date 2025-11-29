@@ -51,6 +51,15 @@ export type Placement = {
   planet: Planet;
   sign: Sign | string;
   degree: number;
+
+  /**
+   * OPTIONAL: House number for this placement.
+   * 1–12 if known; undefined otherwise.
+   * The resonance engine + readingBuilder will automatically
+   * pick this up through appBridge if present.
+   */
+  house?: number;
+
   data?: {
     Sabian?: string;
     Chandra?: string;

@@ -22,6 +22,8 @@ import {
   type LayerExample as GalleryExample,
 } from "../../data/layerExamplesCsvLoader";
 
+import { buildReadingForPlacement } from "../../resonance/appBridge";
+
 import "./sidebar.css";
 
 // Collapsible section
@@ -119,35 +121,34 @@ export default function Sidebar({
     }
   }
 
+  // NEW: full integrated resonance reading (engine + context_v1)
+  const resonanceReading =
+    selected && context ? buildReadingForPlacement(selected, context) : null;
+
   // decans
   const [decans, setDecans] = useState<DecanRecord[] | null>(null);
   const [decansErr, setDecansErr] = useState<string | null>(null);
 
   useEffect(() => {
     let alive = true;
-    loadLayerExamplesFromCsv("data/Resonance_Gallery_12_Placements.csv")
+    loadDecans()
       .then((rows) => {
-        if (alive) setExamples(rows);
+        if (alive) setDecans(rows);
       })
       .catch((e) => {
-        if (alive) setExamplesErr(String(e?.message || e));
+        if (alive) setDecansErr(String(e?.message || e));
       });
     return () => {
       alive = false;
     };
   }, []);
 
-  const selectedDecan =
-    selected && typeof selected.degree === "number" && decans
-      ? getDecan(decans, normSign(selected.sign), Math.floor(selected.degree))
-      : null;
-
-  // CSV-backed "Examples" gallery (welcome card)
+  // CSV-backed "Examples" gallery (welcome card) – explicit path version
   const [examples, setExamples] = useState<GalleryExample[] | null>(null);
   const [examplesErr, setExamplesErr] = useState<string | null>(null);
   useEffect(() => {
     let alive = true;
-    loadLayerExamplesFromCsv()
+    loadLayerExamplesFromCsv("data/Resonance_Gallery_12_Placements.csv")
       .then((rows) => {
         if (alive) setExamples(rows);
       })
@@ -451,6 +452,41 @@ export default function Sidebar({
             </div>
           </Section>
 
+          {/* ===================== NEW: Integrated Resonance Reading ===================== */}
+          {resonanceReading && (
+            <Section title="Integrated Resonance Reading" defaultOpen>
+              <div style={{ marginBottom: 8 }}>
+                <div style={{ fontWeight: 600 }}>{resonanceReading.header}</div>
+                <div
+                  style={{
+                    fontStyle: "italic",
+                    opacity: 0.9,
+                    marginTop: 2,
+                  }}
+                >
+                  {resonanceReading.subheader}
+                </div>
+              </div>
+
+              {resonanceReading.sections.map((section) => (
+                <div key={section.id} style={{ marginBottom: 10 }}>
+                  <div
+                    style={{
+                      fontWeight: 600,
+                      marginBottom: 2,
+                      fontSize: 14,
+                    }}
+                  >
+                    {section.label}
+                  </div>
+                  <div style={{ fontSize: 14, lineHeight: 1.5 }}>
+                    {section.body}
+                  </div>
+                </div>
+              ))}
+            </Section>
+          )}
+
           {/* Browsing banner */}
           {browsingWaveId != null && (
             <div
@@ -573,10 +609,14 @@ export default function Sidebar({
                     className="chip"
                     style={{ cursor: "pointer" }}
                     title={["Decan I", "Decan II", "Decan III"][n - 1]}
-                    aria-label={`Open ${normSign(selected.sign)} Decan ${["I", "II", "III"][n - 1]} in library`}
+                    aria-label={`Open ${normSign(selected.sign)} Decan ${
+                      ["I", "II", "III"][n - 1]
+                    } in library`}
                     onClick={() => {
                       const sign = normSign(selected.sign);
-                      window.location.hash = `#/library/decans/${encodeURIComponent(sign)}/${n}`;
+                      window.location.hash = `#/library/decans/${encodeURIComponent(
+                        sign
+                      )}/${n}`;
                       onOpenDecanLibrary?.(sign, n);
                     }}
                   >
@@ -592,195 +632,247 @@ export default function Sidebar({
               </div>
             ) : !decans ? (
               <div>Loading…</div>
-            ) : !selectedDecan ? (
-              <div>
-                Decan unavailable for {normSign(selected.sign)}{" "}
-                {Math.floor(selected.degree)}°
-              </div>
+            ) : !selected ? (
+              <div className="dim">No placement selected.</div>
+            ) : !selected.degree && selected.degree !== 0 ? (
+              <div className="dim">Degree missing for selected placement.</div>
             ) : (
-              <>
-                <div style={{ fontWeight: 600 }}>{selectedDecan.title}</div>
-                <div style={{ opacity: 0.8, fontSize: 13, marginTop: 2 }}>
-                  {selectedDecan.sub_sign} • Ruler: {selectedDecan.ruler}
-                </div>
+              (() => {
+                const selectedDecan =
+                  selected && typeof selected.degree === "number"
+                    ? getDecan(
+                        decans,
+                        normSign(selected.sign),
+                        Math.floor(selected.degree)
+                      )
+                    : null;
 
-                {/* 1-minute read: What is a Decan? */}
-                <details style={{ marginTop: 8 }}>
-                  <summary style={{ cursor: "pointer", fontWeight: 600 }}>
-                    What is a Decan? (1-minute read)
-                  </summary>
-                  <div style={{ marginTop: 8, fontSize: 14, lineHeight: 1.55 }}>
-                    <p>
-                      Each sign spans 30°, and it’s divided into three{" "}
-                      <em>Decans</em> (10° each). Decans add a distinct
-                      archetypal flavor to the sign — like three chapters within
-                      the same book.
-                    </p>
-                    <ul style={{ margin: "6px 0 6px 18px" }}>
-                      <li>
-                        <strong>Decan I (0–9°)</strong> — the pure seed of the
-                        sign’s energy.
-                      </li>
-                      <li>
-                        <strong>Decan II (10–19°)</strong> — the sign matures; a
-                        secondary ruler adds emphasis.
-                      </li>
-                      <li>
-                        <strong>Decan III (20–29°)</strong> — refinement/mastery
-                        edge.
-                      </li>
-                    </ul>
-                    <p>
-                      In this system, Decans and their rulers set the{" "}
-                      <em>style</em> of expression inside a sign.
-                      <strong> Waves</strong> describe the broader harmonic
-                      field; <strong>Symbols</strong> (Sabian/Chandra) speak to
-                      the exact degree. Use the Decan to orient the story, then
-                      let the Symbol provide the precise, personal note.
-                    </p>
-                    <p style={{ opacity: 0.9 }}>
-                      Example: <strong>Venus at 12° Leo</strong> → Leo{" "}
-                      <strong>Decan II</strong> (Sun influence). The Decan
-                      frames expression; the degree’s Symbols bring a custom
-                      message for 12°.
-                    </p>
-                  </div>
-                </details>
+                if (!selectedDecan) {
+                  return (
+                    <div>
+                      Decan unavailable for {normSign(selected.sign)}{" "}
+                      {Math.floor(selected.degree)}°
+                    </div>
+                  );
+                }
 
-                {/* Quick jump to this sign's Decan Library */}
-                <div
-                  style={{
-                    marginTop: 8,
-                    display: "flex",
-                    gap: 8,
-                    alignItems: "center",
-                    flexWrap: "wrap",
-                  }}
-                >
-                  <a
-                    href={`#/library/decans/${encodeURIComponent(selectedDecan.sign)}/${selectedDecan.decan_number}`}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      window.location.hash = `#/library/decans/${encodeURIComponent(
-                        selectedDecan.sign
-                      )}/${selectedDecan.decan_number}`;
-                      onOpenDecanLibrary?.(
-                        selectedDecan.sign,
-                        selectedDecan.decan_number
-                      );
-                    }}
-                    style={{ textDecoration: "underline" }}
-                    aria-label="Open Decan Library (same tab)"
-                    title="Open Decan Library"
-                  >
-                    Learn more in Decan Library →
-                  </a>
-                  <a
-                    href={`#/library/decans/${encodeURIComponent(selectedDecan.sign)}/${selectedDecan.decan_number}`}
-                    target="_blank"
-                    rel="noopener"
-                    className="chip"
-                    style={{
-                      padding: "2px 8px",
-                      border: "1px solid var(--rs-border)",
-                      textDecoration: "none",
-                    }}
-                    aria-label="Open Decan Library (new tab)"
-                    title="Open in new tab (↗)"
-                  >
-                    ↗
-                  </a>
-                </div>
+                return (
+                  <>
+                    <div style={{ fontWeight: 600 }}>{selectedDecan.title}</div>
+                    <div
+                      style={{
+                        opacity: 0.8,
+                        fontSize: 13,
+                        marginTop: 2,
+                      }}
+                    >
+                      {selectedDecan.sub_sign} • Ruler: {selectedDecan.ruler}
+                    </div>
 
-                <div style={{ marginTop: 8 }}>
-                  <span style={{ fontWeight: 600 }}>Spark:</span>{" "}
-                  {selectedDecan.spark}
-                </div>
+                    {/* 1-minute read: What is a Decan? */}
+                    <details style={{ marginTop: 8 }}>
+                      <summary style={{ cursor: "pointer", fontWeight: 600 }}>
+                        What is a Decan? (1-minute read)
+                      </summary>
+                      <div
+                        style={{
+                          marginTop: 8,
+                          fontSize: 14,
+                          lineHeight: 1.55,
+                        }}
+                      >
+                        <p>
+                          Each sign spans 30°, and it’s divided into three{" "}
+                          <em>Decans</em> (10° each). Decans add a distinct
+                          archetypal flavor to the sign — like three chapters
+                          within the same book.
+                        </p>
+                        <ul style={{ margin: "6px 0 6px 18px" }}>
+                          <li>
+                            <strong>Decan I (0–9°)</strong> — the pure seed of
+                            the sign’s energy.
+                          </li>
+                          <li>
+                            <strong>Decan II (10–19°)</strong> — the sign
+                            matures; a secondary ruler adds emphasis.
+                          </li>
+                          <li>
+                            <strong>Decan III (20–29°)</strong> —
+                            refinement/mastery edge.
+                          </li>
+                        </ul>
+                        <p>
+                          In this system, Decans and their rulers set the{" "}
+                          <em>style</em> of expression inside a sign.
+                          <strong> Waves</strong> describe the broader harmonic
+                          field; <strong>Symbols</strong> (Sabian/Chandra) speak
+                          to the exact degree. Use the Decan to orient the
+                          story, then let the Symbol provide the precise,
+                          personal note.
+                        </p>
+                        <p style={{ opacity: 0.9 }}>
+                          Example: <strong>Venus at 12° Leo</strong> → Leo{" "}
+                          <strong>Decan II</strong> (Sun influence). The Decan
+                          frames expression; the degree’s Symbols bring a custom
+                          message for 12°.
+                        </p>
+                      </div>
+                    </details>
 
-                <div style={{ marginTop: 8 }}>
-                  <span style={{ fontWeight: 600 }}>Deep Insight:</span>{" "}
-                  {trimInsight(selectedDecan.deep_insight, 3)}
-                </div>
+                    {/* Quick jump to this sign's Decan Library */}
+                    <div
+                      style={{
+                        marginTop: 8,
+                        display: "flex",
+                        gap: 8,
+                        alignItems: "center",
+                        flexWrap: "wrap",
+                      }}
+                    >
+                      <a
+                        href={`#/library/decans/${encodeURIComponent(
+                          selectedDecan.sign
+                        )}/${selectedDecan.decan_number}`}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          window.location.hash = `#/library/decans/${encodeURIComponent(
+                            selectedDecan.sign
+                          )}/${selectedDecan.decan_number}`;
+                          onOpenDecanLibrary?.(
+                            selectedDecan.sign,
+                            selectedDecan.decan_number
+                          );
+                        }}
+                        style={{ textDecoration: "underline" }}
+                        aria-label="Open Decan Library (same tab)"
+                        title="Open Decan Library"
+                      >
+                        Learn more in Decan Library →
+                      </a>
+                      <a
+                        href={`#/library/decans/${encodeURIComponent(
+                          selectedDecan.sign
+                        )}/${selectedDecan.decan_number}`}
+                        target="_blank"
+                        rel="noopener"
+                        className="chip"
+                        style={{
+                          padding: "2px 8px",
+                          border: "1px solid var(--rs-border)",
+                          textDecoration: "none",
+                        }}
+                        aria-label="Open Decan Library (new tab)"
+                        title="Open in new tab (↗)"
+                      >
+                        ↗
+                      </a>
+                    </div>
 
-                <div
-                  style={{ marginTop: 8, fontStyle: "italic", opacity: 0.9 }}
-                >
-                  {selectedDecan.poetic}
-                </div>
+                    <div style={{ marginTop: 8 }}>
+                      <span style={{ fontWeight: 600 }}>Spark:</span>{" "}
+                      {selectedDecan.spark}
+                    </div>
 
-                <div
-                  style={{
-                    display: "flex",
-                    gap: 6,
-                    flexWrap: "wrap",
-                    marginTop: 10,
-                  }}
-                >
-                  {(() => {
-                    const chips = parseWaves(selectedDecan.influential_waves_a);
-                    if (chips.length === 10) return <Chip label="All 10" />;
-                    return chips.map((n) => <Chip key={n} label={String(n)} />);
-                  })()}
-                </div>
+                    <div style={{ marginTop: 8 }}>
+                      <span style={{ fontWeight: 600 }}>Deep Insight:</span>{" "}
+                      {trimInsight(selectedDecan.deep_insight, 3)}
+                    </div>
 
-                {/* Library links + Copy link */}
-                <div
-                  style={{
-                    marginTop: 10,
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8,
-                    flexWrap: "wrap",
-                  }}
-                >
-                  {/* Same-tab */}
-                  <a
-                    href={`#/library/decans/${encodeURIComponent(selectedDecan.sign)}/${selectedDecan.decan_number}`}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      window.location.hash = `#/library/decans/${encodeURIComponent(
-                        selectedDecan.sign
-                      )}/${selectedDecan.decan_number}`;
-                      onOpenDecanLibrary?.(
-                        selectedDecan.sign,
-                        selectedDecan.decan_number
-                      );
-                    }}
-                    style={{ textDecoration: "underline" }}
-                    title="Open the full Decan Library page"
-                    aria-label="Open Decan in library (same tab)"
-                  >
-                    Open Decan Library →
-                  </a>
+                    <div
+                      style={{
+                        marginTop: 8,
+                        fontStyle: "italic",
+                        opacity: 0.9,
+                      }}
+                    >
+                      {selectedDecan.poetic}
+                    </div>
 
-                  {/* New tab */}
-                  <a
-                    href={`#/library/decans/${encodeURIComponent(selectedDecan.sign)}/${selectedDecan.decan_number}`}
-                    target="_blank"
-                    rel="noopener"
-                    className="chip"
-                    style={{
-                      padding: "2px 8px",
-                      border: "1px solid var(--rs-border)",
-                      textDecoration: "none",
-                    }}
-                    title="Open in a new tab"
-                    aria-label="Open Decan in library (new tab)"
-                  >
-                    ↗
-                  </a>
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: 6,
+                        flexWrap: "wrap",
+                        marginTop: 10,
+                      }}
+                    >
+                      {(() => {
+                        const chips = parseWaves(
+                          selectedDecan.influential_waves_a
+                        );
+                        if (chips.length === 10) return <Chip label="All 10" />;
+                        return chips.map((n) => (
+                          <Chip key={n} label={String(n)} />
+                        ));
+                      })()}
+                    </div>
 
-                  {/* Copy link */}
-                  <CopyLinkButton
-                    ariaLabel="Copy link to this Decan"
-                    label="Copy link"
-                    getHashHref={() =>
-                      `#/library/decans/${encodeURIComponent(selectedDecan.sign)}/${selectedDecan.decan_number}`
-                    }
-                    className="chip"
-                  />
-                </div>
-              </>
+                    {/* Library links + Copy link */}
+                    <div
+                      style={{
+                        marginTop: 10,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                        flexWrap: "wrap",
+                      }}
+                    >
+                      {/* Same-tab */}
+                      <a
+                        href={`#/library/decans/${encodeURIComponent(
+                          selectedDecan.sign
+                        )}/${selectedDecan.decan_number}`}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          window.location.hash = `#/library/decans/${encodeURIComponent(
+                            selectedDecan.sign
+                          )}/${selectedDecan.decan_number}`;
+                          onOpenDecanLibrary?.(
+                            selectedDecan.sign,
+                            selectedDecan.decan_number
+                          );
+                        }}
+                        style={{ textDecoration: "underline" }}
+                        title="Open the full Decan Library page"
+                        aria-label="Open Decan in library (same tab)"
+                      >
+                        Open Decan Library →
+                      </a>
+
+                      {/* New tab */}
+                      <a
+                        href={`#/library/decans/${encodeURIComponent(
+                          selectedDecan.sign
+                        )}/${selectedDecan.decan_number}`}
+                        target="_blank"
+                        rel="noopener"
+                        className="chip"
+                        style={{
+                          padding: "2px 8px",
+                          border: "1px solid var(--rs-border)",
+                          textDecoration: "none",
+                        }}
+                        title="Open in a new tab"
+                        aria-label="Open Decan in library (new tab)"
+                      >
+                        ↗
+                      </a>
+
+                      {/* Copy link */}
+                      <CopyLinkButton
+                        ariaLabel="Copy link to this Decan"
+                        label="Copy link"
+                        getHashHref={() =>
+                          `#/library/decans/${encodeURIComponent(
+                            selectedDecan.sign
+                          )}/${selectedDecan.decan_number}`
+                        }
+                        className="chip"
+                      />
+                    </div>
+                  </>
+                );
+              })()
             )}
           </Section>
 

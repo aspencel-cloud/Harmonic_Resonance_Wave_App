@@ -59,8 +59,11 @@ const BODY_PATTERN = [
 // Signs
 const SIGN_PATTERN = SIGNS.join("|");
 
+// Optional “in 3rd House” pattern
+const HOUSE_RE = /\bin\s+(\d{1,2})(?:st|nd|rd|th)?\s+house\b/i;
+
 // Main tolerant regex:
-// <Body> in <Sign> <deg°min>[, Retrograde][, in <House> House]
+// <Body> in <Sign> <deg°min>[, ...]
 const LINE_RE = new RegExp(
   String.raw`^\s*(?<body>${BODY_PATTERN})\s+in\s+(?<sign>${SIGN_PATTERN})\s+${DEG_PATTERN}[^]*$`,
   "i"
@@ -77,7 +80,9 @@ function normalizeLine(line: string): string {
 }
 
 function toPlanet(name: string): Planet | null {
-  const key = Object.keys(ALIAS).find((k) => k.toLowerCase() === name.toLowerCase());
+  const key = Object.keys(ALIAS).find(
+    (k) => k.toLowerCase() === name.toLowerCase()
+  );
   return key ? ALIAS[key] : null;
 }
 
@@ -97,6 +102,18 @@ function degMinToInt(degStr?: string, minStr?: string): number | null {
   const floored = Math.floor(decimal); // enforce integer
   if (floored < 0 || floored >= 30) return null;
   return floored;
+}
+
+// Extract house number from a line like "..., in 3rd House"
+function parseHouseFromLine(line: string): number | undefined {
+  const m = line.match(HOUSE_RE);
+  if (!m) return undefined;
+
+  const n = Number(m[1]);
+  if (!Number.isFinite(n)) return undefined;
+  if (n < 1 || n > 12) return undefined;
+
+  return n;
 }
 
 export function parseRawInput(text: string): {
@@ -122,6 +139,7 @@ export function parseRawInput(text: string): {
 
     const planet = toPlanet(bodyRaw);
     const sign = toSign(signRaw);
+    const house = parseHouseFromLine(line); // NEW
 
     if (!planet) {
       errors.push(`Line ${i + 1}: unknown body "${bodyRaw}"`);
@@ -137,7 +155,12 @@ export function parseRawInput(text: string): {
     }
 
     // Only what we need: planet, sign, integer degree (no symbols stored)
-    placements.push({ planet, sign, degree: deg });
+    placements.push({
+      planet,
+      sign,
+      degree: deg,
+      house, // NEW (may be undefined if no house phrase)
+    });
   }
 
   return { placements, errors };
