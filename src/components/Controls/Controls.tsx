@@ -5,42 +5,26 @@ import { SIGNS } from "../../data/signs";
 import { Placement, Planet, Sign } from "../../app/types";
 
 import RawImport from "./RawImport";
-import ExportMenu from "./ExportMenu";
-
-// Export helpers you already have
-import {
-  exportSvg,
-  exportPng,
-  exportJson,
-  exportCsv,
-} from "../../utils/export";
 
 type Props = {
+  // Add a single placement (used when manual add is allowed)
   onAdd: (p: Placement) => void;
+
+  // Clear all placements in the current mode
   onClear: () => void;
 
-  // Optional: Raw import callback
+  // Optional: Raw import callback (used in Full Chart mode)
   onImport?: (items: Omit<Placement, "id">[]) => void;
 
-  // Optional: programmatic loader for built-in context
-  onLoadBuiltInContext?: () => Promise<void> | void;
-
-  // Optional: give us a ref to the actual wheel SVG to export that exact node
-  svgRef?: React.RefObject<SVGSVGElement>;
-
-  // Optional: data providers for JSON/CSV export
-  getExportJSON?: () => unknown;
-  getExportCSV?: () => Array<Record<string, unknown>>;
+  // When true, manual single-add UI is visually present but disabled
+  lockManualAdd?: boolean;
 };
 
 export default function Controls({
   onAdd,
   onClear,
   onImport,
-  onLoadBuiltInContext,
-  svgRef,
-  getExportJSON,
-  getExportCSV,
+  lockManualAdd = false,
 }: Props) {
   const [planet, setPlanet] = useState<Planet>("Sun");
   const [sign, setSign] = useState<Sign>("Aries");
@@ -51,23 +35,19 @@ export default function Controls({
     [degree]
   );
 
+  const manualDisabled = lockManualAdd;
+
   function handleAdd() {
-    if (isInvalid) return;
+    if (isInvalid || manualDisabled) return;
     onAdd({
-      id: `${planet}-${sign}-${degree}-${Math.random().toString(36).slice(2, 7)}`,
+      id: `${planet}-${sign}-${degree}-${Math.random()
+        .toString(36)
+        .slice(2, 7)}`,
       planet,
       sign,
       degree,
     });
   }
-
-  // ----- Export handlers -----
-  const handleExportSVG = () => exportSvg(svgRef?.current, "wheel.svg");
-  const handleExportPNG = () => exportPng(svgRef?.current, "wheel.png", 2);
-  const handleExportJSON = () =>
-    exportJson(getExportJSON ? getExportJSON() : {}, "data.json");
-  const handleExportCSV = () =>
-    exportCsv(getExportCSV ? getExportCSV() : [], "data.csv");
 
   return (
     <div
@@ -79,27 +59,14 @@ export default function Controls({
         marginBottom: 12,
       }}
     >
-      {/* LEFT COLUMN: Raw Import + Export/Data (kept narrow so wheel has room) */}
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: 8,
-          maxWidth: 560,
-        }}
-      >
-        {onImport && <RawImport onImport={onImport} />}
+      {/* LEFT: Raw Import (Full Chart entry) */}
+      {onImport ? (
+        <div style={{ maxWidth: 560 }}>
+          <RawImport onImport={onImport} />
+        </div>
+      ) : null}
 
-        <ExportMenu
-          onExportSVG={handleExportSVG}
-          onExportPNG={handleExportPNG}
-          onExportJSON={handleExportJSON}
-          onExportCSV={handleExportCSV}
-          onLoadBuiltInContext={onLoadBuiltInContext ?? (() => {})}
-        />
-      </div>
-
-      {/* RIGHT COLUMN: Manual Add controls */}
+      {/* RIGHT: Manual single-placement controls */}
       <div
         style={{
           display: "flex",
@@ -107,12 +74,14 @@ export default function Controls({
           alignItems: "center",
           flexWrap: "wrap",
           maxWidth: 560,
+          opacity: manualDisabled ? 0.4 : 1,
         }}
       >
         {/* Planet */}
         <select
           value={planet}
           onChange={(e) => setPlanet(e.target.value as Planet)}
+          disabled={manualDisabled}
         >
           {PLANETS.map((p) => (
             <option key={p} value={p}>
@@ -122,7 +91,11 @@ export default function Controls({
         </select>
 
         {/* Sign */}
-        <select value={sign} onChange={(e) => setSign(e.target.value as Sign)}>
+        <select
+          value={sign}
+          onChange={(e) => setSign(e.target.value as Sign)}
+          disabled={manualDisabled}
+        >
           {SIGNS.map((s) => (
             <option key={s} value={s}>
               {s}
@@ -135,6 +108,7 @@ export default function Controls({
           value={degree}
           onChange={(e) => setDegree(Number(e.target.value))}
           title="Degree within the sign (0–29)"
+          disabled={manualDisabled}
         >
           {Array.from({ length: 30 }, (_, d) => (
             <option key={d} value={d}>
@@ -143,9 +117,11 @@ export default function Controls({
           ))}
         </select>
 
-        <button onClick={handleAdd} disabled={isInvalid}>
+        <button onClick={handleAdd} disabled={isInvalid || manualDisabled}>
           Add
         </button>
+
+        {/* Clear still works even when manual add is locked */}
         <button onClick={onClear}>Clear</button>
       </div>
     </div>

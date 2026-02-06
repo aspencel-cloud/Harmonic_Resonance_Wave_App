@@ -414,21 +414,13 @@ function AppShell() {
         }}
       />
 
-      {/* Top Controls Bar (lean: Mode + Export/Data) */}
-      <div style={{ width: "100%", background: "transparent" }}>
-        <div style={{ maxWidth: 1760, margin: "0 auto", padding: "0 16px" }}>
-          <TopControlsBar
-            mode={mode}
-            onSwitchMode={switchMode}
-            loadBuiltInContext={loadBuiltInContext}
-            getExportJSON={getExportJSON}
-            getExportCSV={getExportCSVRows}
-            addPlacement={addPlacement}
-            clearPlacements={clearPlacements}
-            addManyRaw={mode === "chart" ? addManyRaw : undefined}
-          />
-        </div>
-      </div>
+      <TopControlsBar
+        mode={mode}
+        onSwitchMode={switchMode}
+        addPlacement={addPlacement}
+        clearPlacements={clearPlacements}
+        addManyRaw={mode === "chart" ? addManyRaw : undefined}
+      />
 
       {/* Main grid: Wheel | Details */}
       <div

@@ -17,7 +17,10 @@
     "build:waves": "node tools/build-waves.mjs",
     "validate:waves": "node tools/validate-waves.mjs",
     "predeploy": "npm run build",
-    "deploy": "gh-pages -d dist"
+    "deploy": "gh-pages -d dist",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:ui": "vitest --ui"
   },
   "dependencies": {
     "papaparse": "^5.4.1",
@@ -28,11 +31,16 @@
     "@types/papaparse": "^5.2.7",
     "@types/react": "^18.2.25",
     "@types/react-dom": "^18.2.11",
-    "@vitejs/plugin-react": "^4.3.0",
+    "@vitejs/plugin-react": "^4.7.0",
+    "@vitest/coverage-v8": "^4.0.14",
+    "@vitest/ui": "^4.0.14",
+    "baseline-browser-mapping": "^2.8.31",
     "eslint-plugin-prettier": "^5.5.4",
     "gh-pages": "^6.3.0",
+    "jsdom": "^27.2.0",
     "prettier": "^3.6.2",
     "typescript": "^5.5.4",
-    "vite": "^5.4.2"
+    "vite": "^5.4.2",
+    "vitest": "^4.0.14"
   }
 }

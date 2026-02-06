@@ -1,19 +1,14 @@
 import React from "react";
 import Controls from "./Controls";
+import QuickControls from "./QuickControls";
 
 type Mode = "manual" | "chart";
 
 interface TopControlsBarProps {
-  // Mode
   mode: Mode;
   onSwitchMode: (m: Mode) => void;
 
-  // Data / loader / export
-  loadBuiltInContext: () => void;
-  getExportJSON: () => any;
-  getExportCSV: () => any[];
-
-  // Controls (add/import/export)
+  // Shared chart input callbacks
   addPlacement: any;
   clearPlacements: () => void;
   addManyRaw?: any;
@@ -22,9 +17,6 @@ interface TopControlsBarProps {
 export default function TopControlsBar({
   mode,
   onSwitchMode,
-  loadBuiltInContext,
-  getExportJSON,
-  getExportCSV,
   addPlacement,
   clearPlacements,
   addManyRaw,
@@ -81,6 +73,9 @@ export default function TopControlsBar({
     </div>
   );
 
+  const isSinglePlacement = mode === "manual";
+  const isFullChart = mode === "chart";
+
   return (
     <div
       style={{
@@ -91,22 +86,28 @@ export default function TopControlsBar({
         padding: "10px 0 6px",
       }}
     >
-      <Group label="Mode">
+      {/* INPUT MODE selector */}
+      <Group label="Input Mode">
         <Pill
           onClick={() => onSwitchMode("manual")}
-          style={{ fontWeight: mode === "manual" ? 700 : 400 }}
+          style={{ fontWeight: isSinglePlacement ? 700 : 400 }}
         >
-          Manual
+          Single Placement
         </Pill>
+
         <Pill
           onClick={() => onSwitchMode("chart")}
-          style={{ fontWeight: mode === "chart" ? 700 : 400 }}
+          style={{ fontWeight: isFullChart ? 700 : 400 }}
         >
-          Chart
+          Full Chart
+        </Pill>
+
+        <Pill disabled style={{ opacity: 0.4, cursor: "not-allowed" }}>
+          Enter Birth Data
         </Pill>
       </Group>
 
-      {/* Raw Import + Export & Data controls (no CSV toggle) */}
+      {/* Input area switches based on mode */}
       <div
         style={{
           display: "flex",
@@ -116,6 +117,8 @@ export default function TopControlsBar({
           borderRadius: 12,
           padding: "6px 10px",
           background: "var(--rs-surface)",
+          flexGrow: 1,
+          minWidth: 0,
         }}
       >
         <span
@@ -124,18 +127,25 @@ export default function TopControlsBar({
             letterSpacing: 0.6,
             textTransform: "uppercase",
             color: "var(--rs-muted)",
+            whiteSpace: "nowrap",
           }}
         >
-          Export & Data
+          {isSinglePlacement ? "Single Placement" : "Full Chart Input"}
         </span>
-        <Controls
-          onAdd={addPlacement}
-          onClear={clearPlacements}
-          onImport={addManyRaw}
-          onLoadBuiltInContext={loadBuiltInContext}
-          getExportJSON={getExportJSON}
-          getExportCSV={getExportCSV}
-        />
+
+        <div style={{ flexGrow: 1, minWidth: 0 }}>
+          {isSinglePlacement ? (
+            <QuickControls onAdd={addPlacement} onClear={clearPlacements} />
+          ) : (
+            <Controls
+              onAdd={addPlacement}
+              onClear={clearPlacements}
+              onImport={addManyRaw}
+              // 🚫 Always lock manual-add when in Full Chart mode
+              lockManualAdd={true}
+            />
+          )}
+        </div>
       </div>
     </div>
   );
